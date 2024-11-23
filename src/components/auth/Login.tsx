@@ -59,7 +59,7 @@ const Login: React.FC = () => {
           align="center"
           sx={{ mb: 3 }}
         >
-          Connexion à Poker Tracker
+          Sign in to Quoicoubet
         </Typography>
         <Button
           variant="contained"
@@ -72,7 +72,7 @@ const Login: React.FC = () => {
             fontSize: '1.1rem'
           }}
         >
-          Se connecter avec Google
+          Sign in with Google
         </Button>
       </Paper>
     </Box>

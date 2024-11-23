@@ -10,7 +10,8 @@ interface ProfitTrendProps {
 const ProfitTrend: React.FC<ProfitTrendProps> = ({ hands }) => {
   const calculateCumulativeProfit = () => {
     let cumulative = 0;
-    return hands
+    // Créer une copie du tableau avant de le trier
+    return [...hands]
       .sort((a, b) => a.timestamp - b.timestamp)
       .map(hand => {
         cumulative += hand.result;
@@ -29,9 +30,9 @@ const ProfitTrend: React.FC<ProfitTrendProps> = ({ hands }) => {
       {
         label: 'Profit cumulé (BB)',
         data: profitData.map(d => d.profit),
-        fill: true,
+        fill: false,
         borderColor: 'rgb(53, 162, 235)',
-        backgroundColor: 'rgba(53, 162, 235, 0.1)',
+        tension: 0.1,
       },
     ],
   };
@@ -47,7 +48,27 @@ const ProfitTrend: React.FC<ProfitTrendProps> = ({ hands }) => {
         text: 'Évolution du Profit',
       },
     },
+    scales: {
+      y: {
+        type: 'linear' as const,
+        beginAtZero: true,
+      },
+      x: {
+        type: 'category' as const,
+      },
+    },
   };
+
+  // Ajouter une vérification pour éviter le rendu si pas de données
+  if (hands.length === 0) {
+    return (
+      <Paper sx={{ p: 2 }}>
+        <Typography variant="h6" gutterBottom>
+          Pas de données disponibles
+        </Typography>
+      </Paper>
+    );
+  }
 
   return (
     <Paper sx={{ p: 2 }}>

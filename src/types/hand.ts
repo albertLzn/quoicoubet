@@ -1,10 +1,10 @@
 export interface Hand {
   id: string;
-  userId: string;
+  userId: string | undefined;
   cards: Card[];
   position: string;
   action: 'fold' | 'call' | 'raise' | 'bet' | 'check';
-  street: 'preflop' | 'flop' | 'turn' | 'river';
+  street: Street | undefined;
   pot: number;
   result: number;
   timestamp: number;
@@ -15,3 +15,5 @@ export interface Card {
   suit: 'hearts' | 'diamonds' | 'clubs' | 'spades';
   value: string;
 }
+
+export type Street = 'preflop' | 'flop' | 'turn' | 'river';

@@ -44,7 +44,7 @@ const Login: React.FC = () => {
       <Card sx={{ maxWidth: 400, width: '100%' }}>
         <CardContent>
           <Typography variant="h5" align="center" gutterBottom>
-            Poker Tracker Login
+            Quoicoubet Login
           </Typography>
           <Button
             variant="contained"
