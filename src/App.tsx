@@ -1,26 +1,61 @@
 import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import { Routes, Route } from 'react-router-dom';
+import Layout from './components/common/Layout';
+import PrivateRoute from './components/auth/PrivateRoute';
+import Login from './components/auth/Login';
+import Dashboard from './components/Dashboard';
+import HandTracker from './components/hand/HandTracker';
+import Statistics from './components/stats/Statistics';
+import { database } from './config/firebase';
+import { ref, set } from 'firebase/database';
 
-function App() {
+
+
+const testFirebase = async () => {
+  try {
+    const testRef = ref(database, 'test');
+    await set(testRef, {
+      message: 'Test successful',
+      timestamp: Date.now()
+    });
+    console.log('Firebase connection successful');
+  } catch (error) {
+    console.error('Firebase error:', error);
+  }
+};
+testFirebase();
+const App: React.FC = () => {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Layout>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route
+          path="/"
+          element={
+            <PrivateRoute>
+              <Dashboard />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/track"
+          element={
+            <PrivateRoute>
+              <HandTracker />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/stats"
+          element={
+            <PrivateRoute>
+              <Statistics />
+            </PrivateRoute>
+          }
+        />
+      </Routes>
+    </Layout>
   );
-}
+};
 
 export default App;
