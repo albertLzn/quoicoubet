@@ -9,26 +9,36 @@ import {
   Box 
 } from '@mui/material';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { auth } from '../../config/firebase';
+import { auth, database } from '../../config/firebase';
 import { setUser, setError } from '../../features/auth/authSlice';
 import GoogleIcon from '@mui/icons-material/Google';
+import { ref, set } from 'firebase/database';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-
   const handleGoogleLogin = async () => {
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
+      
+      // Créer le nœud utilisateur s'il n'existe pas
+      const userRef = ref(database, `users/${result.user.uid}`);
+      await set(userRef, {
+        email: result.user.email,
+        displayName: result.user.displayName,
+        createdAt: Date.now()
+      });
+  
       dispatch(setUser({
         uid: result.user.uid,
         email: result.user.email,
-        displayName: result.user.displayName,
+        displayName: result.user.displayName
       }));
+      
       navigate('/');
-    } catch (error: any) {
-      dispatch(setError(error.message));
+    } catch (error) {
+      console.error('Erreur de connexion:', error);
     }
   };
 

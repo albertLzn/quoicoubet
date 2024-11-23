@@ -6,6 +6,8 @@ import { Card as CardType } from '../../types/hand';
 interface CardSelectorProps {
   selectedCards: CardType[];
   onCardSelect: (card: CardType) => void;
+  disabled?: boolean;  // Ajout de la prop optionnelle
+
 }
 
 const CardSelector: React.FC<CardSelectorProps> = ({ selectedCards, onCardSelect }) => {

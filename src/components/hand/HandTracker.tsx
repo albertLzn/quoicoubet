@@ -10,10 +10,13 @@ import {
   MenuItem,
   Typography,
   Paper,
-  ListItemIcon
+  ListItemIcon,
+  Stepper,
+  Step,
+  StepLabel
 } from '@mui/material';
 import { useSpring, animated } from 'react-spring';
-import { Card as CardType, Hand, Street } from '../../types/hand';
+import { Card, Card as CardType, Hand, PokerRound, Street } from '../../types/hand';
 import { addHand } from '../../features/hands/handsSlice';
 import CardSelector from './CardSelector';
 import { database } from '../../config/firebase';
@@ -26,180 +29,191 @@ import {
   Casino as BetIcon,
   RadioButtonUnchecked as CheckIcon,
 } from '@mui/icons-material';
+import { addRound } from '../../features/rounds/roundsSlice';
 
 
 type PokerAction = 'fold' | 'call' | 'raise' | 'bet' | 'check';
 
-
+const actionIcons = {
+  fold: <FoldIcon />,
+  call: <CallIcon />,
+  raise: <RaiseIcon />,
+  bet: <BetIcon />,
+  check: <CheckIcon />,
+};
 const HandTracker: React.FC = () => {
-  
   const dispatch = useDispatch();
   const user = useSelector((state: RootState) => state.auth.user);
-  const [selectedCards, setSelectedCards] = useState<CardType[]>([]);
+  const [selectedCards, setSelectedCards] = useState<Card[]>([]);
   const [position, setPosition] = useState('');
-  const [pot, setPot] = useState('');
   const [action, setAction] = useState<PokerAction>('fold');
-  const [street, setStreet] = useState<Street>('preflop');
-
-  const actionIcons = {
-    fold: <FoldIcon />,
-    call: <CallIcon />,
-    raise: <RaiseIcon />,
-    bet: <BetIcon />,
-    check: <CheckIcon />,
-  };
-
-  const handleActionChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    if (isValidAction(newValue)) {
-      setAction(newValue);
-    }
-  };
-
-  const isValidAction = (value: string): value is PokerAction => {
-    return ['fold', 'call', 'raise', 'bet', 'check'].includes(value);
-  };
-
-  
-  const formAnimation = useSpring({
-    from: { opacity: 0, transform: 'translateY(20px)' },
-    to: { opacity: 1, transform: 'translateY(0)' },
+  const [pot, setPot] = useState('');
+  const [activeStep, setActiveStep] = useState(0);
+  const [roundData, setRoundData] = useState<PokerRound>({
+    id: '',
+    userId: user?.uid,
+    cards: [],
+    position: '',
+    timestamp: Date.now(),
+    streets: {}
   });
 
-  const handleCardSelect = (card: CardType) => {
+  const steps = ['Preflop', 'Flop', 'Turn', 'River'];
+  const handleCardSelect = (card: Card) => {
     if (selectedCards.length < 2) {
       setSelectedCards([...selectedCards, card]);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (selectedCards.length !== 2) return;
-
-    const newHand: Hand = {
-      id: '',
-      street: undefined,
-      userId: user?.uid,
+  const handleSaveRound = async () => {
+    const currentStreet = steps[activeStep].toLowerCase();
+    const updatedRoundData = {
+      ...roundData,
       cards: selectedCards,
       position,
-      action,
-      pot: Number(pot),
-      result: 0,
-      timestamp: Date.now(),
+      streets: {
+        ...roundData.streets,
+        [currentStreet]: {
+          action,
+          pot: Number(pot),
+          timestamp: Date.now()
+        }
+      }
     };
-
+  
     try {
-      const handRef = await push(ref(database, `hands/${user?.uid}`), newHand);
-      newHand.id = handRef.key || '';
-      dispatch(addHand(newHand));
-      
-      setSelectedCards([]);
-      setPosition('');
-      setPot('');
-      setAction('fold');
+      const roundRef = await push(ref(database, `rounds/${user?.uid}`), updatedRoundData);
+      if (roundRef.key) {
+        dispatch(addRound({ ...updatedRoundData, id: roundRef.key }));
+        
+        // Reset form
+        setSelectedCards([]);
+        setPosition('');
+        setPot('');
+        setAction('fold');
+        setActiveStep(0);
+        setRoundData({
+          id: '',
+          userId: user?.uid,
+          cards: [],
+          position: '',
+          timestamp: Date.now(),
+          streets: {}
+        });
+      }
     } catch (error) {
-      console.error('Error saving hand:', error);
+      console.error('Error saving round:', error);
     }
   };
-
   return (
-    <animated.div style={formAnimation}>
-      <Paper sx={{ p: 3, mt: 3 }}>
-        <Typography variant="h5" gutterBottom>
-          Enregistrer une nouvelle main
-        </Typography>
-        <form onSubmit={handleSubmit}>
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="subtitle1" gutterBottom>
-              Sélectionnez vos cartes
-            </Typography>
-            <CardSelector
-              selectedCards={selectedCards}
-              onCardSelect={handleCardSelect}
-            />
-          </Box>
-
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel>Position</InputLabel>
-            <Select
-              value={position}
-              onChange={(e) => setPosition(e.target.value)}
-              required
-            >
-              <MenuItem value="BB">Big Blind</MenuItem>
-              <MenuItem value="SB">Small Blind</MenuItem>
-              <MenuItem value="BTN">Button</MenuItem>
-              <MenuItem value="CO">Cutoff</MenuItem>
-              <MenuItem value="MP">Middle Position</MenuItem>
-              <MenuItem value="EP">Early Position</MenuItem>
-            </Select>
-          </FormControl>
-
-          <FormControl fullWidth sx={{ mb: 2 }}>
-  <InputLabel>Tour de jeu</InputLabel>
+    <Paper sx={{ p: 3, mt: 3 }}>
+      <Stepper activeStep={activeStep}>
+        {steps.map((label) => (
+          <Step key={label}>
+            <StepLabel>{label}</StepLabel>
+          </Step>
+        ))}
+      </Stepper>
+      
+        <CardSelector
+          selectedCards={selectedCards}
+          onCardSelect={handleCardSelect}
+          disabled={activeStep > 0}
+        />
+        
+        <FormControl fullWidth sx={{ mb: 2 }}>
+  <InputLabel>Position</InputLabel>
   <Select
-    value={street}
-    onChange={(e) => setStreet(e.target.value as Street)}
+    value={position}
+    onChange={(e) => setPosition(e.target.value)}
     required
   >
-    <MenuItem value="preflop">Preflop</MenuItem>
-    <MenuItem value="flop">Flop</MenuItem>
-    <MenuItem value="turn">Turn</MenuItem>
-    <MenuItem value="river">River</MenuItem>
+    <MenuItem value="BB">Big Blind</MenuItem>
+    <MenuItem value="SB">Small Blind</MenuItem>
+    <MenuItem value="BTN">Button</MenuItem>
+    <MenuItem value="CO">Cutoff</MenuItem>
+    <MenuItem value="MP">Middle Position</MenuItem>
+    <MenuItem value="EP">Early Position</MenuItem>
   </Select>
 </FormControl>
 
-          <TextField
-            fullWidth
-            label="Taille du pot"
-            type="number"
-            value={pot}
-            onChange={(e) => setPot(e.target.value)}
-            sx={{ mb: 2 }}
-            required
-          />
+        <TextField
+          fullWidth
+          label="Taille du pot"
+          type="number"
+          value={pot}
+          onChange={(e) => setPot(e.target.value)}
+          sx={{ mb: 2 }}
+          required
+        />
 
 <FormControl fullWidth sx={{ mb: 2 }}>
-    <InputLabel>Action</InputLabel>
-    <Select
-      value={action}
-      onChange={(e) => setAction(e.target.value as PokerAction)}
-      required
+  <InputLabel>Action</InputLabel>
+  <Select
+    value={action}
+    onChange={(e) => setAction(e.target.value as PokerAction)}
+    required
+  >
+    <MenuItem value="fold">
+      <ListItemIcon>{actionIcons.fold}</ListItemIcon>
+      Fold
+    </MenuItem>
+    <MenuItem value="call">
+      <ListItemIcon>{actionIcons.call}</ListItemIcon>
+      Call
+    </MenuItem>
+    <MenuItem value="raise">
+      <ListItemIcon>{actionIcons.raise}</ListItemIcon>
+      Raise
+    </MenuItem>
+    <MenuItem value="bet">
+      <ListItemIcon>{actionIcons.bet}</ListItemIcon>
+      Bet
+    </MenuItem>
+    <MenuItem value="check">
+      <ListItemIcon>{actionIcons.check}</ListItemIcon>
+      Check
+    </MenuItem>
+  </Select>
+</FormControl>
+<Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+  <Button
+    variant="outlined"
+    onClick={handleSaveRound}
+    disabled={!position || !pot || selectedCards.length !== 2}
+  >
+    Enregistrer
+  </Button>
+  
+  {activeStep < steps.length - 1 && (
+    <Button
+      variant="contained"
+      onClick={() => {
+        const currentStreet = steps[activeStep].toLowerCase();
+        setRoundData(prev => ({
+          ...prev,
+          cards: selectedCards,
+          position,
+          streets: {
+            ...prev.streets,
+            [currentStreet]: {
+              action,
+              pot: Number(pot),
+              timestamp: Date.now()
+            }
+          }
+        }));
+        setActiveStep(prev => prev + 1);
+        setPot('');
+        setAction('fold');
+      }}
+      disabled={!position || !pot || selectedCards.length !== 2}
     >
-      <MenuItem value="fold">
-        <ListItemIcon>{actionIcons.fold}</ListItemIcon>
-        Fold
-      </MenuItem>
-      <MenuItem value="call">
-        <ListItemIcon>{actionIcons.call}</ListItemIcon>
-        Call
-      </MenuItem>
-      <MenuItem value="raise">
-        <ListItemIcon>{actionIcons.raise}</ListItemIcon>
-        Raise
-      </MenuItem>
-      <MenuItem value="bet">
-        <ListItemIcon>{actionIcons.bet}</ListItemIcon>
-        Bet
-      </MenuItem>
-      <MenuItem value="check">
-        <ListItemIcon>{actionIcons.check}</ListItemIcon>
-        Check
-      </MenuItem>
-    </Select>
-  </FormControl>
-
-          <Button
-            variant="contained"
-            type="submit"
-            fullWidth
-            disabled={selectedCards.length !== 2}
-          >
-            Enregistrer la main
-          </Button>
-        </form>
-      </Paper>
-    </animated.div>
+      Suivant
+    </Button>
+  )}
+</Box>
+    </Paper>
   );
 };
 

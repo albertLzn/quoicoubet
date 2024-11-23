@@ -17,3 +17,23 @@ export interface Card {
 }
 
 export type Street = 'preflop' | 'flop' | 'turn' | 'river';
+
+export interface PokerRound {
+  id: string;
+  userId: string | undefined;
+  cards: Card[];
+  position: string;
+  timestamp: number;
+  streets: {
+    preflop?: StreetAction;
+    flop?: StreetAction;
+    turn?: StreetAction;
+    river?: StreetAction;
+  };
+}
+
+export interface StreetAction {
+  action: 'fold' | 'call' | 'raise' | 'bet' | 'check';
+  pot: number;
+  timestamp: number;
+}
