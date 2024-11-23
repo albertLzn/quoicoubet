@@ -5,7 +5,7 @@ import { Hand } from '../types/hand';
 export const handService = {
   saveHand: async (userId: string, hand: Omit<Hand, 'id'>) => {
     try {
-      const handRef = push(ref(database, `hands/${userId}`));
+      const handRef = push(ref(database, `rounds/${userId}`));
       const handWithId = { ...hand, id: handRef.key };
       await set(handRef, handWithId);
       return handWithId;
@@ -18,7 +18,7 @@ export const handService = {
   getUserHands: async (userId: string): Promise<Hand[]> => {
     try {
       const handsRef = query(
-        ref(database, `hands/${userId}`),
+        ref(database, `rounds/${userId}`),
         orderByChild('timestamp')
       );
       const snapshot = await get(handsRef);
@@ -32,7 +32,7 @@ export const handService = {
 
   updateHand: async (userId: string, handId: string, updates: Partial<Hand>) => {
     try {
-      const handRef = ref(database, `hands/${userId}/${handId}`);
+      const handRef = ref(database, `rounds/${userId}/${handId}`);
       await set(handRef, updates);
       return updates;
     } catch (error) {

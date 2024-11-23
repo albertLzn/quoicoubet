@@ -22,7 +22,7 @@ const Login: React.FC = () => {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       
-      // Créer le nœud utilisateur s'il n'existe pas
+      // Créer l'entrée utilisateur dans la base
       const userRef = ref(database, `users/${result.user.uid}`);
       await set(userRef, {
         email: result.user.email,
@@ -33,7 +33,7 @@ const Login: React.FC = () => {
       dispatch(setUser({
         uid: result.user.uid,
         email: result.user.email,
-        displayName: result.user.displayName
+        displayName: result.user.displayName,
       }));
       
       navigate('/');

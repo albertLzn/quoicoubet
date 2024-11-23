@@ -43,7 +43,7 @@ const StatsDashboard: React.FC = () => {
     const calculateStats = async () => {
       dispatch(setLoading(true));
       try {
-        const handsRef = ref(database, `hands/${user?.uid}`);
+        const handsRef = ref(database, `rounds/${user?.uid}`);
         const snapshot = await get(handsRef);
         const handsData = snapshot.val();
         
