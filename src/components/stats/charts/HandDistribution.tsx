@@ -47,6 +47,16 @@ const HandDistribution: React.FC<HandDistributionProps> = ({ rounds }) => {
       },
     },
   };
+  if (rounds.length === 0) {
+    return (
+      <Paper sx={{ p: 2 }}>
+        <Typography variant="h6" gutterBottom>
+          Pas de données disponibles
+        </Typography>
+      </Paper>
+    );
+  }
+  
 
   return (
     <Paper sx={{ p: 2 }}>

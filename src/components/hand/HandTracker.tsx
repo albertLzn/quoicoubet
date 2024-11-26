@@ -50,13 +50,20 @@ const HandTracker: React.FC = () => {
   const [activeStep, setActiveStep] = useState(0);
   const [result, setResult] = useState<number>(0);
   const [isWin, setIsWin] = useState(false);
+  const [stackSize, setStackSize] = useState<number>(0);
+  const [blindLevel, setBlindLevel] = useState<string>('');
+  const [sessionId, setSessionId] = useState<string>('');
   const [roundData, setRoundData] = useState<PokerRound>({
     id: '',
     userId: user?.uid,
     cards: [],
     position: '',
     timestamp: Date.now(),
-    streets: {}
+    streets: {},
+    // Nouvelles propriétés
+    stackSize: 0,
+    blindLevel: '',
+    sessionId: Date.now().toString()
   });
 
   const steps = ['Preflop', 'Flop', 'Turn', 'River'];
@@ -72,13 +79,18 @@ const HandTracker: React.FC = () => {
       ...roundData,
       cards: selectedCards,
       position,
+      stackSize,
+      blindLevel,
+      sessionId: sessionId || Date.now().toString(), // Génère un ID si non fourni
       streets: {
         ...roundData.streets,
         [currentStreet]: {
           action,
           pot: Number(pot),
           timestamp: Date.now(),
-          result: isWin ? 1 : -1  // Ajout du result
+          result: isWin ? 1 : -1,
+          isThreeBet: false, // À gérer via l'UI
+          isCBet: false, // À gérer via l'UI
         }
       }
     };
@@ -100,7 +112,10 @@ const HandTracker: React.FC = () => {
           cards: [],
           position: '',
           timestamp: Date.now(),
-          streets: {}
+          streets: {},
+          stackSize: 0,
+          blindLevel: '',
+          sessionId: Date.now().toString()
         });
       }
     } catch (error) {
@@ -122,6 +137,37 @@ const HandTracker: React.FC = () => {
           onCardSelect={handleCardSelect}
           disabled={activeStep > 0}
         />
+
+<FormControl fullWidth sx={{ mb: 2 }}>
+  <InputLabel>Niveau de Blinds</InputLabel>
+  <Select
+    value={blindLevel}
+    onChange={(e) => setBlindLevel(e.target.value)}
+    required
+  >
+    <MenuItem value="2/4">2/4</MenuItem>
+    <MenuItem value="5/10">5/10</MenuItem>
+    <MenuItem value="10/20">10/20</MenuItem>
+    <MenuItem value="20/40">20/40</MenuItem>
+    <MenuItem value="25/50">25/50</MenuItem>
+    <MenuItem value="50/100">50/100</MenuItem>
+    <MenuItem value="100/200">100/200</MenuItem>
+    <MenuItem value="200/400">200/400</MenuItem>
+    <MenuItem value="500/1000">500/1000</MenuItem>
+  </Select>
+</FormControl>
+
+        <FormControl fullWidth sx={{ mb: 2 }}>
+        <TextField
+      fullWidth
+      label="Your stack size (BB)"
+      type="number"
+      value={stackSize}
+      onChange={(e) => setStackSize(Number(e.target.value))}
+      sx={{ mb: 2 }}
+      required
+    />
+        </FormControl>
         
         <FormControl fullWidth sx={{ mb: 2 }}>
   <InputLabel>Position</InputLabel>
@@ -148,6 +194,8 @@ const HandTracker: React.FC = () => {
           sx={{ mb: 2 }}
           required
         />
+
+
 
 <FormControl fullWidth sx={{ mb: 2 }}>
   <InputLabel>Action</InputLabel>

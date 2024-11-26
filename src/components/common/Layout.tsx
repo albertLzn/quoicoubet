@@ -93,8 +93,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
-          mt: 8,
+          p: 1,
+          mt: 3,
           width: '100%'
         }}
       >

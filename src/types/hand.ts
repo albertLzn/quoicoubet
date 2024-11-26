@@ -18,6 +18,10 @@ export interface Card {
 
 export type Street = 'preflop' | 'flop' | 'turn' | 'river';
 
+interface Streets {
+  [key: string]: StreetAction;
+}
+
 export interface PokerRound {
   id: string;
   userId: string | undefined;
@@ -30,11 +34,17 @@ export interface PokerRound {
     turn?: StreetAction;
     river?: StreetAction;
   };
+  stackSize: number;
+  blindLevel: string;
+  sessionId: string;
 }
+
 
 export interface StreetAction {
   action: 'fold' | 'call' | 'raise' | 'bet' | 'check';
   pot: number;
   timestamp: number;
-  result: number; // Gain/Perte en BB
+  result: number;
+  isThreeBet?: boolean;
+  isCBet?: boolean;
 }
