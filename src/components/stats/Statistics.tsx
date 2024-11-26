@@ -1,34 +1,42 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Box } from '@mui/material';
+import { Box, CircularProgress } from '@mui/material';
 import AdvancedStats from './AdvancedStats';
 import { RootState } from '../../store';
-import { handService } from '../../services/handService';
-import { setHands } from '../../features/hands/handsSlice';
+import { roundService } from '../../services/roundService';
+import { setRounds } from '../../features/rounds/roundsSlice';
 
 const Statistics: React.FC = () => {
   const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.auth);
-  const hands = useSelector((state: RootState) => state.hands.hands);
+  const rounds = useSelector((state: RootState) => state.rounds.rounds);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const loadHands = async () => {
+    const loadRounds = async () => {
       if (user) {
+        setIsLoading(true);
         try {
-          const userHands = await handService.getUserHands(user.uid);
-          dispatch(setHands(userHands));
+          const userRounds = await roundService.getUserRounds(user.uid);
+          dispatch(setRounds(userRounds));
         } catch (error) {
-          console.error('Erreur lors du chargement des mains:', error);
+          console.error('Erreur lors du chargement des rounds:', error);
+        } finally {
+          setIsLoading(false);
         }
       }
     };
 
-    loadHands();
+    loadRounds();
   }, [dispatch, user]);
+
+  if (isLoading) {
+    return <CircularProgress />;
+  }
 
   return (
     <Box sx={{ mt: 2 }}>
-      <AdvancedStats hands={hands} />
+      <AdvancedStats rounds={rounds} />
     </Box>
   );
 };

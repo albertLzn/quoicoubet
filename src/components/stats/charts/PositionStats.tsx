@@ -1,14 +1,14 @@
 import React from 'react';
 import { Paper, Typography } from '@mui/material';
 import { Bar } from 'react-chartjs-2';
-import { Hand } from '../../../types/hand';
+import { Hand, PokerRound } from '../../../types/hand';
 
 interface PositionStatsProps {
-  hands: Hand[];
+  rounds: PokerRound[];
 }
 
-const PositionStats: React.FC<PositionStatsProps> = ({ hands }) => {
-  const positionData = hands.reduce((acc, hand) => {
+const PositionStats: React.FC<PositionStatsProps> = ({ rounds }) => {
+  const positionData = rounds.reduce((acc, hand) => {
     acc[hand.position] = (acc[hand.position] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);

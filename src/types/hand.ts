@@ -36,4 +36,5 @@ export interface StreetAction {
   action: 'fold' | 'call' | 'raise' | 'bet' | 'check';
   pot: number;
   timestamp: number;
+  result: number; // Gain/Perte en BB
 }

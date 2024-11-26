@@ -1,4 +1,4 @@
-import React, { ChangeEvent, useState } from 'react';
+import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Box,
@@ -8,16 +8,15 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Typography,
   Paper,
   ListItemIcon,
   Stepper,
   Step,
-  StepLabel
+  StepLabel,
+  FormControlLabel,
+  Checkbox
 } from '@mui/material';
-import { useSpring, animated } from 'react-spring';
-import { Card, Card as CardType, Hand, PokerRound, Street } from '../../types/hand';
-import { addHand } from '../../features/hands/handsSlice';
+import { Card, PokerRound } from '../../types/hand';
 import CardSelector from './CardSelector';
 import { database } from '../../config/firebase';
 import { ref, push } from 'firebase/database';
@@ -49,6 +48,8 @@ const HandTracker: React.FC = () => {
   const [action, setAction] = useState<PokerAction>('fold');
   const [pot, setPot] = useState('');
   const [activeStep, setActiveStep] = useState(0);
+  const [result, setResult] = useState<number>(0);
+  const [isWin, setIsWin] = useState(false);
   const [roundData, setRoundData] = useState<PokerRound>({
     id: '',
     userId: user?.uid,
@@ -76,7 +77,8 @@ const HandTracker: React.FC = () => {
         [currentStreet]: {
           action,
           pot: Number(pot),
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          result: isWin ? 1 : -1  // Ajout du result
         }
       }
     };
@@ -175,6 +177,16 @@ const HandTracker: React.FC = () => {
       Check
     </MenuItem>
   </Select>
+  <FormControlLabel
+  control={
+    <Checkbox
+      checked={result > 0}
+      onChange={(e) => setResult(e.target.checked ? 1 : -1)}
+    />
+  }
+  label="Round gagné"
+  sx={{ mb: 2 }}
+/>
 </FormControl>
 <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
   <Button

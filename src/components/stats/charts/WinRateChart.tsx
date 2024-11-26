@@ -1,30 +1,40 @@
 import React from 'react';
 import { Line } from 'react-chartjs-2';
 import { Paper, Typography } from '@mui/material';
-import { Hand } from '../../../types/hand';
+import { Hand, PokerRound,StreetAction } from '../../../types/hand';
 
 interface WinRateChartProps {
-  hands: Hand[];
+  rounds: PokerRound[];
 }
 
-const WinRateChart: React.FC<WinRateChartProps> = ({ hands }) => {
+const WinRateChart: React.FC<WinRateChartProps> = ({ rounds }) => {
+  interface SessionStats {
+    wins: number;
+    total: number;
+  }
   const calculateWinRate = () => {
-    const sessions = hands.reduce((acc, hand) => {
-      const date = new Date(hand.timestamp).toLocaleDateString();
+    const sessions = rounds.reduce((acc: Record<string, SessionStats>, round: PokerRound) => {
+      const date = new Date(round.timestamp).toLocaleDateString();
       if (!acc[date]) {
         acc[date] = { wins: 0, total: 0 };
       }
+      
+      const streets = Object.values(round.streets);
+      const lastStreet = streets[streets.length - 1] as StreetAction;
+      
       acc[date].total++;
-      if (hand.result > 0) acc[date].wins++;
+      if (lastStreet && lastStreet.result > 0) {
+        acc[date].wins++;
+      }
+      
       return acc;
-    }, {} as Record<string, { wins: number; total: number }>);
+    }, {});
 
-    return Object.entries(sessions).map(([date, stats]) => ({
+    return Object.entries(sessions).map(([date, stats]: [string, SessionStats]) => ({
       date,
       winRate: (stats.wins / stats.total) * 100,
     }));
   };
-
   const winRateData = calculateWinRate();
 
   const data = {

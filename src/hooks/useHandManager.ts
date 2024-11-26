@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
-import { handService } from '../services/handService';
-import { addHand, setHands } from '../features/hands/handsSlice';
-import { Hand } from '../types/hand';
+import { roundService } from '../services/roundService';
+import { Hand, PokerRound } from '../types/hand';
+import { addRound, setRounds } from '../features/rounds/roundsSlice';
 
 export const useHandManager = (userId: string) => {
   const dispatch = useDispatch();
@@ -12,8 +12,8 @@ export const useHandManager = (userId: string) => {
   useEffect(() => {
     const loadHands = async () => {
       try {
-        const hands = await handService.getUserHands(userId);
-        dispatch(setHands(hands as Hand[]));
+        const rounds = await roundService.getUserRounds(userId);
+        dispatch(setRounds(rounds as PokerRound[]));
       } catch (err) {
         setError('Erreur lors du chargement des mains');
       } finally {
@@ -24,12 +24,12 @@ export const useHandManager = (userId: string) => {
     loadHands();
   }, [userId, dispatch]);
 
-  const saveNewHand = async (handData: Omit<Hand, 'id'>) => {
+  const saveNewHand = async (roundData: Omit<PokerRound, 'id'>) => {
     try {
-      const savedHand = await handService.saveHand(userId, handData);
-      if (savedHand.id) {
-        dispatch(addHand(savedHand as Hand));
-        return savedHand as Hand;
+      const savedRound = await roundService.saveRound(userId, roundData);
+      if (savedRound.id) {
+        dispatch(addRound(savedRound as PokerRound));
+        return savedRound as PokerRound;
       }
       throw new Error('Hand ID is missing');
     } catch (err) {

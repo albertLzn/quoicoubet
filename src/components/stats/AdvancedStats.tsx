@@ -1,29 +1,29 @@
 import React from 'react';
 import { Grid } from '@mui/material';
-import { Hand } from '../../types/hand';
+import { Hand, PokerRound } from '../../types/hand';
 import WinRateChart from './charts/WinRateChart';
 import PositionStats from './charts/PositionStats';
 import HandDistribution from './charts/HandDistribution';
 import ProfitTrend from './charts/ProfitTrend';
 
 interface AdvancedStatsProps {
-  hands: Hand[];
+  rounds: PokerRound[];
 }
 
-const AdvancedStats: React.FC<AdvancedStatsProps> = ({ hands }) => {
+const AdvancedStats: React.FC<AdvancedStatsProps> = ({ rounds }) => {
   return (
     <Grid container spacing={3}>
       <Grid item xs={12} md={6}>
-        <WinRateChart hands={hands} />
+        <WinRateChart rounds={rounds} />
       </Grid>
       <Grid item xs={12} md={6}>
-        <PositionStats hands={hands} />
+        <PositionStats rounds={rounds} />
       </Grid>
       <Grid item xs={12} md={6}>
-        <HandDistribution hands={hands} />
+        <HandDistribution rounds={rounds} />
       </Grid>
       <Grid item xs={12} md={6}>
-        <ProfitTrend hands={hands} />
+        <ProfitTrend rounds={rounds} />
       </Grid>
     </Grid>
   );

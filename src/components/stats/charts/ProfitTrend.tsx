@@ -1,22 +1,26 @@
 import React from 'react';
 import { Line } from 'react-chartjs-2';
 import { Paper, Typography } from '@mui/material';
-import { Hand } from '../../../types/hand';
+import { PokerRound } from '../../../types/hand';
+import '../../../config/chartConfig';
 
 interface ProfitTrendProps {
-  hands: Hand[];
+  rounds: PokerRound[];
 }
 
-const ProfitTrend: React.FC<ProfitTrendProps> = ({ hands }) => {
+const ProfitTrend: React.FC<ProfitTrendProps> = ({ rounds }) => {
   const calculateCumulativeProfit = () => {
     let cumulative = 0;
-    // Créer une copie du tableau avant de le trier
-    return [...hands]
-      .sort((a, b) => a.timestamp - b.timestamp)
-      .map(hand => {
-        cumulative += hand.result;
+    
+    return rounds.slice().sort((a, b) => a.timestamp - b.timestamp)
+      .map(round => {
+        const streets = Object.values(round.streets || {});
+        const lastStreet = streets[streets.length - 1];
+        if (lastStreet) {
+          cumulative += lastStreet.result;
+        }
         return {
-          date: new Date(hand.timestamp).toLocaleDateString(),
+          date: new Date(round.timestamp).toLocaleDateString(),
           profit: cumulative,
         };
       });
@@ -59,8 +63,7 @@ const ProfitTrend: React.FC<ProfitTrendProps> = ({ hands }) => {
     },
   };
 
-  // Ajouter une vérification pour éviter le rendu si pas de données
-  if (hands.length === 0) {
+  if (rounds.length === 0) {
     return (
       <Paper sx={{ p: 2 }}>
         <Typography variant="h6" gutterBottom>
