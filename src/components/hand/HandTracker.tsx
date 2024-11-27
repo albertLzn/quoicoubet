@@ -1,32 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
-  Box,
-  Paper,
-  Typography,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  Drawer,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Grid
+  Box, Button, TextField, FormControl, InputLabel, Select, MenuItem, 
+  Paper, ListItemIcon, Stepper, Step, StepLabel, FormControlLabel,
+  Checkbox, Dialog, DialogTitle, DialogContent, DialogActions,
+  Typography, Grid,
+  Drawer
 } from '@mui/material';
-import { Settings } from '@mui/icons-material';
-import { RootState } from '../../store';
+import {
+  CallEnd as FoldIcon, Call as CallIcon, TrendingUp as RaiseIcon,
+  Casino as BetIcon, RadioButtonUnchecked as CheckIcon, Settings
+} from '@mui/icons-material';
+import { useSpring, animated } from 'react-spring';
 import { Card, PokerRound } from '../../types/hand';
-import { addRound } from '../../features/rounds/roundsSlice';
 import { database } from '../../config/firebase';
 import { ref, push } from 'firebase/database';
+import { RootState } from '../../store';
+import { addRound } from '../../features/rounds/roundsSlice';
 import PokerRangeTable from '../PokerRangeTable';
 import { CardValue, Position } from '../../types/poker';
 
+type PokerAction = 'fold' | 'call' | 'raise' | 'bet' | 'check';
 type Suit = 'hearts' | 'diamonds' | 'spades' | 'clubs';
+
+const actionIcons = {
+  fold: <FoldIcon />,
+  call: <CallIcon />,
+  raise: <RaiseIcon />,
+  bet: <BetIcon />,
+  check: <CheckIcon />,
+};
 
 const CardSlot: React.FC<{
   card: Card | null;
@@ -114,106 +117,47 @@ const CardSelectorDialog: React.FC<{
   );
 };
 
-const GameOptions: React.FC<{
-  position: string;
-  setPosition: (pos: string) => void;
-  stackSize: number;
-  setStackSize: (size: number) => void;
-  blindLevel: string;
-  setBlindLevel: (level: string) => void;
-  priceToCall: number;
-  setPriceToCall: (price: number) => void;
-  onSave: () => void;
-}> = ({ 
-  position, setPosition, 
-  stackSize, setStackSize,
-  blindLevel, setBlindLevel,
-  priceToCall, setPriceToCall,
-  onSave 
-}) => (
-  <Box sx={{ width: 300, p: 2 }}>
-    <Typography variant="h6" gutterBottom>Options de jeu</Typography>
-    
-    <FormControl fullWidth sx={{ mb: 2 }}>
-      <InputLabel>Position</InputLabel>
-      <Select
-        value={position}
-        onChange={(e) => setPosition(e.target.value)}
-        required
-      >
-        <MenuItem value="BB">Big Blind</MenuItem>
-        <MenuItem value="SB">Small Blind</MenuItem>
-        <MenuItem value="BTN">Button</MenuItem>
-        <MenuItem value="CO">Cutoff</MenuItem>
-        <MenuItem value="MP">Middle Position</MenuItem>
-        <MenuItem value="UTG">Under the Gun</MenuItem>
-      </Select>
-    </FormControl>
-
-    <TextField
-      fullWidth
-      label="Stack size (BB)"
-      type="number"
-      value={stackSize}
-      onChange={(e) => setStackSize(Number(e.target.value))}
-      sx={{ mb: 2 }}
-    />
-
-    <FormControl fullWidth sx={{ mb: 2 }}>
-      <InputLabel>Niveau de Blinds</InputLabel>
-      <Select
-        value={blindLevel}
-        onChange={(e) => setBlindLevel(e.target.value)}
-        required
-      >
-        <MenuItem value="2/4">2/4</MenuItem>
-        <MenuItem value="5/10">5/10</MenuItem>
-        <MenuItem value="10/20">10/20</MenuItem>
-        <MenuItem value="20/40">20/40</MenuItem>
-        <MenuItem value="25/50">25/50</MenuItem>
-        <MenuItem value="50/100">50/100</MenuItem>
-        <MenuItem value="100/200">100/200</MenuItem>
-      </Select>
-    </FormControl>
-
-    <TextField
-      fullWidth
-      label="Prix pour suivre (BB)"
-      type="number"
-      value={priceToCall}
-      onChange={(e) => setPriceToCall(Number(e.target.value))}
-      sx={{ mb: 2 }}
-    />
-
-    <Button 
-      variant="contained" 
-      fullWidth 
-      onClick={onSave}
-    >
-      Sauvegarder
-    </Button>
-  </Box>
-);
-
 const HandTracker: React.FC = () => {
   const dispatch = useDispatch();
   const user = useSelector((state: RootState) => state.auth.user);
   
+  // États existants
+  const [selectedCards, setSelectedCards] = useState<Card[]>([]);
+  const [position, setPosition] = useState('');
+  const [action, setAction] = useState<PokerAction>('fold');
+  const [pot, setPot] = useState('');
+  const [activeStep, setActiveStep] = useState(0);
+  const [result, setResult] = useState<number>(0);
+  const [isWin, setIsWin] = useState(false);
+  const [stackSize, setStackSize] = useState<number>(0);
+  const [blindLevel, setBlindLevel] = useState<string>('');
+  const [sessionId] = useState<string>(Date.now().toString());
+  const [priceToCall, setPriceToCall] = useState<number>(0);
+
+  // Nouveaux états pour l'interface
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [cardSelectorOpen, setCardSelectorOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
-  const [selectedCards, setSelectedCards] = useState<Card[]>([]);
   const [communityCards, setCommunityCards] = useState<(Card | null)[]>([null, null, null, null, null]);
-  
-  const [position, setPosition] = useState('');
-  const [stackSize, setStackSize] = useState(0);
-  const [blindLevel, setBlindLevel] = useState('');
-  const [priceToCall, setPriceToCall] = useState(0);
   const [openPredictions, setOpenPredictions] = useState(false);
+  const [roundData, setRoundData] = useState<PokerRound>({
+    id: '',
+    userId: user?.uid,
+    cards: [],
+    position: '',
+    timestamp: Date.now(),
+    streets: {},
+    stackSize: 0,
+    blindLevel: '',
+    sessionId: Date.now().toString()
+  });
+  const steps = ['Preflop', 'Flop', 'Turn', 'River'];
+  const streets = Object.values(roundData.streets);
 
   const canShowPredictions = selectedCards.length === 2 && position && stackSize > 0;
 
   const handleSaveRound = async () => {
+    const currentStreet = steps[activeStep].toLowerCase();
     const roundData: PokerRound = {
       id: '',
       userId: user?.uid,
@@ -221,16 +165,18 @@ const HandTracker: React.FC = () => {
       position,
       timestamp: Date.now(),
       streets: {
-        preflop: {
-          action: 'call',
-          pot: priceToCall,
+        [currentStreet]: {
+          action,
+          pot: Number(pot),
           timestamp: Date.now(),
-          result: 0
+          result: isWin ? 1 : -1,
+          isThreeBet: false,
+          isCBet: false
         }
       },
       stackSize,
       blindLevel,
-      sessionId: Date.now().toString()
+      sessionId
     };
 
     try {
@@ -239,6 +185,10 @@ const HandTracker: React.FC = () => {
         dispatch(addRound({ ...roundData, id: roundRef.key }));
         setSelectedCards([]);
         setCommunityCards([null, null, null, null, null]);
+        setPosition('');
+        setPot('');
+        setAction('fold');
+        setActiveStep(0);
       }
     } catch (error) {
       console.error('Error saving round:', error);
@@ -254,7 +204,51 @@ const HandTracker: React.FC = () => {
       position: 'relative',
       padding: 2
     }}>
-      {/* Table de poker */}
+      <Stepper activeStep={activeStep} sx={{ position: 'absolute', top: 20, left: '50%', transform: 'translateX(-50%)', width: '80%' }}>
+        {steps.map((label) => (
+          <Step key={label}>
+            <StepLabel>{label}</StepLabel>
+          </Step>
+        ))}
+      </Stepper>
+
+      {/* Position du joueur */}
+      <FormControl sx={{ position: 'absolute', bottom: '120px', left: '50%', transform: 'translateX(-50%)', width: '200px' }}>
+        <Select
+          value={position}
+          onChange={(e) => setPosition(e.target.value)}
+          size="small"
+        >
+          <MenuItem value="BB">Big Blind</MenuItem>
+          <MenuItem value="SB">Small Blind</MenuItem>
+          <MenuItem value="BTN">Button</MenuItem>
+          <MenuItem value="CO">Cutoff</MenuItem>
+          <MenuItem value="MP">Middle Position</MenuItem>
+          <MenuItem value="UTG">Under the Gun</MenuItem>
+        </Select>
+      </FormControl>
+
+      {/* Taille du pot */}
+      <TextField
+        size="small"
+        type="number"
+        value={pot}
+        onChange={(e) => setPot(e.target.value)}
+        label="Taille du pot"
+        sx={{ position: 'absolute', top: '30%', left: '50%', transform: 'translateX(-50%)', width: '150px' }}
+      />
+
+      {/* Stack size */}
+      <TextField
+        size="small"
+        type="number"
+        value={stackSize}
+        onChange={(e) => setStackSize(Number(e.target.value))}
+        label="Stack (BB)"
+        sx={{ position: 'absolute', bottom: '-30px', left: '50%', transform: 'translateX(-50%)', width: '150px' }}
+      />
+
+      {/* Cartes communautaires */}
       <Box sx={{ 
         position: 'absolute', 
         top: '50%', 
@@ -263,7 +257,6 @@ const HandTracker: React.FC = () => {
         display: 'flex',
         gap: 2
       }}>
-        {/* Cartes communautaires */}
         {communityCards.map((card, index) => (
           <CardSlot
             key={index}
@@ -297,28 +290,56 @@ const HandTracker: React.FC = () => {
         ))}
       </Box>
 
-      {/* Menu latéral */}
-      <Button 
-        variant="contained"
-        sx={{ position: 'absolute', right: 20, top: 20 }}
-        onClick={() => setDrawerOpen(true)}
-        startIcon={<Settings />}
-      >
-        Options
-      </Button>
-
-      {canShowPredictions && (
-        <Button
+      {/* Boutons d'action */}
+      <Box sx={{ position: 'absolute', right: 20, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Button 
           variant="contained"
-          color="secondary"
-          onClick={() => setOpenPredictions(true)}
-          sx={{ position: 'absolute', right: 20, top: 80 }}
+          onClick={() => setDrawerOpen(true)}
+          startIcon={<Settings />}
         >
-          Prédictions
+          Options
         </Button>
-      )}
 
-      {/* Sélecteur de carte */}
+        {canShowPredictions && (
+          <Button
+            variant="contained"
+            color="secondary"
+            onClick={() => setOpenPredictions(true)}
+          >
+            Prédictions
+          </Button>
+        )}
+
+        {activeStep < steps.length - 1 && (
+          <Button
+            variant="contained"
+            onClick={() => {
+              const currentStreet = steps[activeStep].toLowerCase();
+              setRoundData(prev => ({
+                ...prev,
+                streets: {
+                  ...prev.streets,
+                  [currentStreet]: {
+                    action,
+                    pot: Number(pot),
+                    timestamp: Date.now(),
+                    result: isWin ? 1 : -1,
+                    isThreeBet: false,
+                    isCBet: false
+                  }
+                }
+              }));
+              setActiveStep(prev => prev + 1);
+              setPot('');
+              setAction('fold');
+            }}
+          >
+            Suivant
+          </Button>
+        )}
+      </Box>
+
+      {/* Dialogs et Drawer */}
       <CardSelectorDialog
         open={cardSelectorOpen}
         onClose={() => setCardSelectorOpen(false)}
@@ -339,29 +360,6 @@ const HandTracker: React.FC = () => {
         }}
       />
 
-      {/* Drawer des options */}
-      <Drawer
-        anchor="right"
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-      >
-        <GameOptions
-          position={position}
-          setPosition={setPosition}
-          stackSize={stackSize}
-          setStackSize={setStackSize}
-          blindLevel={blindLevel}
-          setBlindLevel={setBlindLevel}
-          priceToCall={priceToCall}
-          setPriceToCall={setPriceToCall}
-          onSave={() => {
-            handleSaveRound();
-            setDrawerOpen(false);
-          }}
-        />
-      </Drawer>
-
-      {/* Dialog des prédictions */}
       <Dialog
         open={openPredictions}
         onClose={() => setOpenPredictions(false)}
@@ -384,7 +382,83 @@ const HandTracker: React.FC = () => {
           <Button onClick={() => setOpenPredictions(false)}>Fermer</Button>
         </DialogActions>
       </Dialog>
-    </Box>
+
+      <Drawer
+        anchor="right"
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+      >
+        <Box sx={{ width: 300, p: 2 }}>
+          <Typography variant="h6" gutterBottom>Options de jeu</Typography>
+          
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel>Action</InputLabel>
+            <Select
+              value={action}
+              onChange={(e) => setAction(e.target.value as PokerAction)}
+              required
+            >
+              {Object.entries(actionIcons).map(([key, icon]) => (
+                <MenuItem key={key} value={key}>
+                  <ListItemIcon>{icon}</ListItemIcon>
+                  {key.charAt(0).toUpperCase() + key.slice(1)}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel>Niveau de Blinds</InputLabel>
+            <Select
+              value={blindLevel}
+              onChange={(e) => setBlindLevel(e.target.value)}
+              required
+            >
+              <MenuItem value="2/4">2/4</MenuItem>
+              <MenuItem value="5/10">5/10</MenuItem>
+              <MenuItem value="10/20">10/20</MenuItem>
+              <MenuItem value="20/40">20/40</MenuItem>
+              <MenuItem value="25/50">25/50</MenuItem>
+              <MenuItem value="50/100">50/100</MenuItem>
+              <MenuItem value="100/200">100/200</MenuItem>
+            </Select>
+          </FormControl>
+          <TextField
+              fullWidth
+              label="Prix pour suivre (BB)"
+              type="number"
+              value={priceToCall}
+              onChange={(e) => setPriceToCall(Number(e.target.value))}
+              sx={{ mb: 2 }}
+            />
+
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={isWin}
+                  onChange={(e) => {
+                    setIsWin(e.target.checked);
+                    setResult(e.target.checked ? 1 : -1);
+                  }}
+                />
+              }
+              label="Round gagné"
+              sx={{ mb: 2 }}
+            />
+
+            <Button 
+              variant="contained" 
+              fullWidth 
+              onClick={() => {
+                handleSaveRound();
+                setDrawerOpen(false);
+              }}
+            >
+              Sauvegarder
+            </Button>
+          </Box>
+        </Drawer>
+      </Box>
   );
 };
 
