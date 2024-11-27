@@ -11,6 +11,10 @@ export const store = configureStore({
     rounds: roundsReducer,
     stats: statsReducer,
   },
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: false 
+    })
 });
 
 export type RootState = ReturnType<typeof store.getState>;

@@ -26,7 +26,6 @@ const Statistics: React.FC = () => {
         }
       }
     };
-
     loadRounds();
   }, [dispatch, user]);
 

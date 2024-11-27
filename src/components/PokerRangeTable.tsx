@@ -72,7 +72,6 @@ const PokerRangeTable: React.FC<PokerRangeTableProps> = ({
     Main: <strong>{card1}{card2}</strong> • 
   </Typography>
 
-  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="body2">Joueurs restants:</Typography>
             <IconButton 
               size="small" 
@@ -87,7 +86,6 @@ const PokerRangeTable: React.FC<PokerRangeTableProps> = ({
             >
               <AddCircle />
             </IconButton>
-          </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
   <Typography variant="body2">Prix pour suivre (BB):</Typography>

@@ -3,11 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { Grid, Paper, Typography, Box, CircularProgress } from '@mui/material';
 import { useSpring, animated } from 'react-spring';
 import { RootState } from '../../store';
-import { updateStats, setLoading } from '../../features/stats/statsSlice';
-import { database } from '../../config/firebase';
-import { ref, get } from 'firebase/database';
-import { Hand } from '../../types/hand';
-import { calculateVPIP, calculatePFR } from '../../utils/pokerCalculations';
+import { updateStats } from '../../features/stats/statsSlice';
 
 interface StatCardProps {
   title: string;
@@ -27,7 +23,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, unit = '' }) => {
       <Typography variant="h6" gutterBottom>
         {title}
       </Typography>
-      <animated.div>
+      <animated.div style={{ fontSize: '24px', fontWeight: 'bold' }}>
         {animation.number.to((n) => `${n.toFixed(2)}${unit}`)}
       </animated.div>
     </Paper>
@@ -37,51 +33,31 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, unit = '' }) => {
 const StatsDashboard: React.FC = () => {
   const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.auth);
+  const rounds = useSelector((state: RootState) => state.rounds.rounds);
   const stats = useSelector((state: RootState) => state.stats);
 
   useEffect(() => {
-    const calculateStats = async () => {
-      dispatch(setLoading(true));
-      try {
-        const handsRef = ref(database, `rounds/${user?.uid}`);
-        const snapshot = await get(handsRef);
-        const handsData = snapshot.val();
-        
-        const handsArray: Hand[] = handsData ? Object.values(handsData).map((hand: any): Hand => ({
-          id: hand.id,
-          userId: hand.userId,
-          cards: hand.cards,
-          position: hand.position,
-          action: hand.action,
-          street: hand.street,
-          pot: hand.pot,
-          result: hand.result,
-          timestamp: hand.timestamp,
-          notes: hand.notes
-        })) : [];
+    if (rounds.length > 0) {
+      const totalRounds = rounds.length;
+      const winningRounds = rounds.filter(round => {
+        const streets = Object.values(round.streets);
+        const lastStreet = streets[streets.length - 1];
+        return lastStreet?.result > 0;
+      });
+      
+      const totalBB = rounds.reduce((acc, round) => {
+        const streets = Object.values(round.streets);
+        const lastStreet = streets[streets.length - 1];
+        return acc + (lastStreet?.result || 0);
+      }, 0);
 
-        const totalHands = handsArray.length;
-        const winningHands = handsArray.filter(hand => hand.result > 0);
-        const totalBB = handsArray.reduce((acc, hand) => acc + hand.result, 0);
-
-        dispatch(updateStats({
-          totalHands,
-          winRate: totalHands > 0 ? (winningHands.length / totalHands) * 100 : 0,
-          bbPer100: totalHands > 0 ? (totalBB / totalHands) * 100 : 0,
-          vpip: calculateVPIP(handsArray),
-          pfr: calculatePFR(handsArray),
-        }));
-      } catch (error) {
-        console.error('Error calculating stats:', error);
-      } finally {
-        dispatch(setLoading(false));
-      }
-    };
-
-    if (user) {
-      calculateStats();
+      dispatch(updateStats({
+        totalHands: totalRounds,
+        winRate: totalRounds > 0 ? (winningRounds.length / totalRounds) * 100 : 0,
+        bbPer100: totalRounds > 0 ? (totalBB / totalRounds) * 100 : 0,
+      }));
     }
-  }, [dispatch, user]);
+  }, [rounds, dispatch]);
 
   if (stats.loading) {
     return (
@@ -101,12 +77,6 @@ const StatsDashboard: React.FC = () => {
       </Grid>
       <Grid item xs={12} md={4}>
         <StatCard title="BB/100" value={stats.bbPer100} unit=" BB" />
-      </Grid>
-      <Grid item xs={12} md={6}>
-        <StatCard title="VPIP" value={stats.vpip} unit="%" />
-      </Grid>
-      <Grid item xs={12} md={6}>
-        <StatCard title="PFR" value={stats.pfr} unit="%" />
       </Grid>
     </Grid>
   );

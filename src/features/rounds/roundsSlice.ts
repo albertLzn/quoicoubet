@@ -1,6 +1,8 @@
-// features/rounds/roundsSlice.ts
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { PokerRound } from '../../types/hand';
+import { database } from '../../config/firebase';
+import { ref, get } from 'firebase/database';
 
 interface RoundsState {
   rounds: PokerRound[];
@@ -8,11 +10,29 @@ interface RoundsState {
   error: string | null;
 }
 
+
+export const fetchRounds = createAsyncThunk(
+  'rounds/fetchRounds',
+  async (userId: string) => {
+    const roundsRef = ref(database, `rounds/${userId}`);
+    const snapshot = await get(roundsRef);
+    if (snapshot.exists()) {
+      const rounds = Object.entries(snapshot.val()).map(([key, data]) => ({
+        ...data as PokerRound,
+        id: key
+      }));
+      return rounds;
+    }
+    return [];
+  }
+);
+
 const initialState: RoundsState = {
   rounds: [],
   loading: false,
   error: null
 };
+
 
 const roundsSlice = createSlice({
   name: 'rounds',
