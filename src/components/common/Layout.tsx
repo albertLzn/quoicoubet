@@ -32,6 +32,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
     { text: 'Nouvelle Main', icon: <AddBoxIcon />, path: '/track' },
     { text: 'Statistiques', icon: <BarChartIcon />, path: '/stats' },
+    { text: 'Poker Joker', icon: <AddBoxIcon />, path: '/predictions' },
   ];
 
   const handleLogout = () => {

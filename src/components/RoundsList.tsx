@@ -51,7 +51,20 @@ const RoundCard: React.FC<{ round: PokerRound }> = ({ round }) => {
         </Box>
 {/* Stepper et actions */}
 <Box sx={{ flex: 1, mx: 3 }}>
-  <Stepper>
+  <Stepper sx={{
+    '& .MuiStepLabel-label': {
+      // Cache le texte en version mobile
+      display: { xs: 'none', sm: 'block' }
+    },
+    // Réduit l'espacement entre les étapes en version mobile
+    '& .MuiStep-root': {
+      px: { xs: 0, sm: 1 }
+    },
+    // Réduit la taille des icônes en version mobile
+    '& .MuiStepIcon-root': {
+      fontSize: { xs: '1rem', sm: '1.5rem' }
+    }
+  }}>
     {steps.map((label, index) => (
       <Step key={label} completed={index < streets.length}>
         <StepLabel>{label}</StepLabel>
@@ -62,16 +75,20 @@ const RoundCard: React.FC<{ round: PokerRound }> = ({ round }) => {
     {steps.map((step, idx) => (
       <Grid 
         item 
-        xs={3}  // Fixé à 3 (12/4) pour avoir toujours 4 colonnes
+        xs={3}
         key={idx} 
         sx={{ 
           textAlign: 'center',
-          px: 1
+          px: { xs: 0.5, sm: 1 },
+          // Ajuste la taille du texte en version mobile
+          '& .MuiTypography-body2': {
+            fontSize: { xs: '0.7rem', sm: '0.875rem' }
+          }
         }}
       >
         {idx < streets.length && (
-          <Typography variant="body2">
-            {streets[idx].action.toUpperCase()} ({streets[idx].pot} BB)
+          <Typography variant="body2" noWrap>
+            {streets[idx].action.toUpperCase()} ({streets[idx].pot}BB)
           </Typography>
         )}
       </Grid>

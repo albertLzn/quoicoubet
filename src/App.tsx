@@ -8,6 +8,7 @@ import HandTracker from './components/hand/HandTracker';
 import Statistics from './components/stats/Statistics';
 import { database } from './config/firebase';
 import { ref, set } from 'firebase/database';
+import Predictions from './components/Predictions';
 
 
 
@@ -50,6 +51,14 @@ const App: React.FC = () => {
           element={
             <PrivateRoute>
               <Statistics />
+            </PrivateRoute>
+          }
+        />
+      <Route
+          path="/predictions"
+          element={
+            <PrivateRoute>
+              <Predictions />
             </PrivateRoute>
           }
         />
