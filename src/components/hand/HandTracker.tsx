@@ -1,135 +1,244 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Box,
-  Button,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Paper,
-  ListItemIcon,
-  Stepper,
-  Step,
-  StepLabel,
-  FormControlLabel,
-  Checkbox,
+  Typography,
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  Button,
+  Drawer,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Grid
 } from '@mui/material';
+import { Settings } from '@mui/icons-material';
+import { RootState } from '../../store';
 import { Card, PokerRound } from '../../types/hand';
-import CardSelector from './CardSelector';
+import { addRound } from '../../features/rounds/roundsSlice';
 import { database } from '../../config/firebase';
 import { ref, push } from 'firebase/database';
-import { RootState } from '../../store';
-import {
-  CallEnd as FoldIcon,
-  Call as CallIcon,
-  TrendingUp as RaiseIcon,
-  Casino as BetIcon,
-  RadioButtonUnchecked as CheckIcon,
-  Analytics as PredictIcon
-} from '@mui/icons-material';
-import { addRound } from '../../features/rounds/roundsSlice';
 import PokerRangeTable from '../PokerRangeTable';
 import { CardValue, Position } from '../../types/poker';
 
-type PokerAction = 'fold' | 'call' | 'raise' | 'bet' | 'check';
+type Suit = 'hearts' | 'diamonds' | 'spades' | 'clubs';
 
-const actionIcons = {
-  fold: <FoldIcon />,
-  call: <CallIcon />,
-  raise: <RaiseIcon />,
-  bet: <BetIcon />,
-  check: <CheckIcon />,
+const CardSlot: React.FC<{
+  card: Card | null;
+  onClick: () => void;
+}> = ({ card, onClick }) => (
+  <Paper
+    sx={{
+      width: 60,
+      height: 90,
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: card ? 'white' : 'rgba(255,255,255,0.1)'
+    }}
+    onClick={onClick}
+  >
+    {card && (
+      <Typography 
+        sx={{ 
+          color: ['hearts', 'diamonds'].includes(card.suit) ? 'red' : 'black'
+        }}
+      >
+        {card.value}{card.suit.charAt(0)}
+      </Typography>
+    )}
+  </Paper>
+);
+
+const CardSelectorDialog: React.FC<{
+  open: boolean;
+  onClose: () => void;
+  selectedCards: Card[];
+  onCardSelect: (card: Card) => void;
+}> = ({ open, onClose, selectedCards, onCardSelect }) => {
+  const [selectedValue, setSelectedValue] = useState<string | null>(null);
+  const values = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'];
+  const suits: Suit[] = ['hearts', 'diamonds', 'spades', 'clubs'];
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>Sélectionner une carte</DialogTitle>
+      <DialogContent>
+        <Grid container spacing={1}>
+          {values.map((value) => (
+            <Grid item key={value} xs={2}>
+              <Button
+                variant={selectedValue === value ? 'contained' : 'outlined'}
+                onClick={() => setSelectedValue(value)}
+                fullWidth
+              >
+                {value}
+              </Button>
+            </Grid>
+          ))}
+        </Grid>
+        
+        {selectedValue && (
+          <Grid container spacing={2} sx={{ mt: 2 }}>
+            {suits.map((suit) => {
+              const isDisabled = selectedCards.some(
+                card => card.value === selectedValue && card.suit === suit
+              );
+              return (
+                <Grid item xs={6} key={suit}>
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    disabled={isDisabled}
+                    onClick={() => onCardSelect({ value: selectedValue, suit })}
+                    sx={{
+                      color: ['hearts', 'diamonds'].includes(suit) ? 'red' : 'black',
+                      opacity: isDisabled ? 0.5 : 1
+                    }}
+                  >
+                    {suit}
+                  </Button>
+                </Grid>
+              );
+            })}
+          </Grid>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
 };
+
+const GameOptions: React.FC<{
+  position: string;
+  setPosition: (pos: string) => void;
+  stackSize: number;
+  setStackSize: (size: number) => void;
+  blindLevel: string;
+  setBlindLevel: (level: string) => void;
+  priceToCall: number;
+  setPriceToCall: (price: number) => void;
+  onSave: () => void;
+}> = ({ 
+  position, setPosition, 
+  stackSize, setStackSize,
+  blindLevel, setBlindLevel,
+  priceToCall, setPriceToCall,
+  onSave 
+}) => (
+  <Box sx={{ width: 300, p: 2 }}>
+    <Typography variant="h6" gutterBottom>Options de jeu</Typography>
+    
+    <FormControl fullWidth sx={{ mb: 2 }}>
+      <InputLabel>Position</InputLabel>
+      <Select
+        value={position}
+        onChange={(e) => setPosition(e.target.value)}
+        required
+      >
+        <MenuItem value="BB">Big Blind</MenuItem>
+        <MenuItem value="SB">Small Blind</MenuItem>
+        <MenuItem value="BTN">Button</MenuItem>
+        <MenuItem value="CO">Cutoff</MenuItem>
+        <MenuItem value="MP">Middle Position</MenuItem>
+        <MenuItem value="UTG">Under the Gun</MenuItem>
+      </Select>
+    </FormControl>
+
+    <TextField
+      fullWidth
+      label="Stack size (BB)"
+      type="number"
+      value={stackSize}
+      onChange={(e) => setStackSize(Number(e.target.value))}
+      sx={{ mb: 2 }}
+    />
+
+    <FormControl fullWidth sx={{ mb: 2 }}>
+      <InputLabel>Niveau de Blinds</InputLabel>
+      <Select
+        value={blindLevel}
+        onChange={(e) => setBlindLevel(e.target.value)}
+        required
+      >
+        <MenuItem value="2/4">2/4</MenuItem>
+        <MenuItem value="5/10">5/10</MenuItem>
+        <MenuItem value="10/20">10/20</MenuItem>
+        <MenuItem value="20/40">20/40</MenuItem>
+        <MenuItem value="25/50">25/50</MenuItem>
+        <MenuItem value="50/100">50/100</MenuItem>
+        <MenuItem value="100/200">100/200</MenuItem>
+      </Select>
+    </FormControl>
+
+    <TextField
+      fullWidth
+      label="Prix pour suivre (BB)"
+      type="number"
+      value={priceToCall}
+      onChange={(e) => setPriceToCall(Number(e.target.value))}
+      sx={{ mb: 2 }}
+    />
+
+    <Button 
+      variant="contained" 
+      fullWidth 
+      onClick={onSave}
+    >
+      Sauvegarder
+    </Button>
+  </Box>
+);
 
 const HandTracker: React.FC = () => {
   const dispatch = useDispatch();
   const user = useSelector((state: RootState) => state.auth.user);
+  
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [cardSelectorOpen, setCardSelectorOpen] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [selectedCards, setSelectedCards] = useState<Card[]>([]);
+  const [communityCards, setCommunityCards] = useState<(Card | null)[]>([null, null, null, null, null]);
+  
   const [position, setPosition] = useState('');
-  const [action, setAction] = useState<PokerAction>('fold');
-  const [pot, setPot] = useState('');
-  const [activeStep, setActiveStep] = useState(0);
-  const [result, setResult] = useState<number>(0);
-  const [isWin, setIsWin] = useState(false);
-  const [stackSize, setStackSize] = useState<number>(0);
-  const [blindLevel, setBlindLevel] = useState<string>('');
-  const [sessionId, setSessionId] = useState<string>('');
+  const [stackSize, setStackSize] = useState(0);
+  const [blindLevel, setBlindLevel] = useState('');
+  const [priceToCall, setPriceToCall] = useState(0);
   const [openPredictions, setOpenPredictions] = useState(false);
-  const [priceToCall, setPriceToCall] = useState<number>(0);
 
-  const [roundData, setRoundData] = useState<PokerRound>({
-    id: '',
-    userId: user?.uid,
-    cards: [],
-    position: '',
-    timestamp: Date.now(),
-    streets: {},
-    stackSize: 0,
-    blindLevel: '',
-    sessionId: Date.now().toString()
-  });
-
-  const steps = ['Preflop', 'Flop', 'Turn', 'River'];
-
-  const canShowPredictions = useMemo(() => {
-    return position && stackSize > 0 && blindLevel && selectedCards.length === 2;
-  }, [position, stackSize, blindLevel, selectedCards.length]);
-
-  const handleCardSelect = (card: Card) => {
-    if (selectedCards.length < 2) {
-      setSelectedCards([...selectedCards, card]);
-    }
-  };
+  const canShowPredictions = selectedCards.length === 2 && position && stackSize > 0;
 
   const handleSaveRound = async () => {
-    const currentStreet = steps[activeStep].toLowerCase();
-    const updatedRoundData = {
-      ...roundData,
+    const roundData: PokerRound = {
+      id: '',
+      userId: user?.uid,
       cards: selectedCards,
       position,
+      timestamp: Date.now(),
+      streets: {
+        preflop: {
+          action: 'call',
+          pot: priceToCall,
+          timestamp: Date.now(),
+          result: 0
+        }
+      },
       stackSize,
       blindLevel,
-      sessionId: sessionId || Date.now().toString(),
-      streets: {
-        ...roundData.streets,
-        [currentStreet]: {
-          action,
-          pot: Number(pot),
-          timestamp: Date.now(),
-          result: isWin ? 1 : -1,
-          isThreeBet: false,
-          isCBet: false,
-        }
-      }
+      sessionId: Date.now().toString()
     };
 
     try {
-      const roundRef = await push(ref(database, `rounds/${user?.uid}`), updatedRoundData);
+      const roundRef = await push(ref(database, `rounds/${user?.uid}`), roundData);
       if (roundRef.key) {
-        dispatch(addRound({ ...updatedRoundData, id: roundRef.key }));
-
+        dispatch(addRound({ ...roundData, id: roundRef.key }));
         setSelectedCards([]);
-        setPosition('');
-        setPot('');
-        setAction('fold');
-        setActiveStep(0);
-        setRoundData({
-          id: '',
-          userId: user?.uid,
-          cards: [],
-          position: '',
-          timestamp: Date.now(),
-          streets: {},
-          stackSize: 0,
-          blindLevel: '',
-          sessionId: Date.now().toString()
-        });
+        setCommunityCards([null, null, null, null, null]);
       }
     } catch (error) {
       console.error('Error saving round:', error);
@@ -137,191 +246,129 @@ const HandTracker: React.FC = () => {
   };
 
   return (
-    <Paper sx={{ p: 3, mt: 3 }}>
-      <Stepper activeStep={activeStep}>
-        {steps.map((label) => (
-          <Step key={label}>
-            <StepLabel>{label}</StepLabel>
-          </Step>
-        ))}
-      </Stepper>
-
-      <CardSelector
-        selectedCards={selectedCards}
-        onCardSelect={handleCardSelect}
-        disabled={activeStep > 0}
-      />
-
-      <FormControl fullWidth sx={{ mb: 2 }}>
-        <InputLabel>Niveau de Blinds</InputLabel>
-        <Select
-          value={blindLevel}
-          onChange={(e) => setBlindLevel(e.target.value)}
-          required
-        >
-          <MenuItem value="2/4">2/4</MenuItem>
-          <MenuItem value="5/10">5/10</MenuItem>
-          <MenuItem value="10/20">10/20</MenuItem>
-          <MenuItem value="20/40">20/40</MenuItem>
-          <MenuItem value="25/50">25/50</MenuItem>
-          <MenuItem value="50/100">50/100</MenuItem>
-          <MenuItem value="100/200">100/200</MenuItem>
-          <MenuItem value="200/400">200/400</MenuItem>
-          <MenuItem value="500/1000">500/1000</MenuItem>
-        </Select>
-      </FormControl>
-
-      <TextField
-        fullWidth
-        label="Your stack size (BB)"
-        type="number"
-        value={stackSize}
-        onChange={(e) => setStackSize(Number(e.target.value))}
-        sx={{ mb: 2 }}
-        required
-      />
-
-      <FormControl fullWidth sx={{ mb: 2 }}>
-        <InputLabel>Position</InputLabel>
-        <Select
-          value={position}
-          onChange={(e) => setPosition(e.target.value)}
-          required
-        >
-          <MenuItem value="BB">Big Blind</MenuItem>
-          <MenuItem value="SB">Small Blind</MenuItem>
-          <MenuItem value="BTN">Button</MenuItem>
-          <MenuItem value="CO">Cutoff</MenuItem>
-          <MenuItem value="MP">Middle Position</MenuItem>
-          <MenuItem value="EP">Early Position</MenuItem>
-        </Select>
-      </FormControl>
-
-      <TextField
-        fullWidth
-        label="Taille du pot"
-        type="number"
-        value={pot}
-        onChange={(e) => setPot(e.target.value)}
-        sx={{ mb: 2 }}
-        required
-      />
-
-<TextField
-  fullWidth
-  label="Price to call (BB)"
-  type="number"
-  value={priceToCall}
-  onChange={(e) => setPriceToCall(Number(e.target.value))}
-  sx={{ mb: 2 }}
-  required
-/>
-
-      <FormControl fullWidth sx={{ mb: 2 }}>
-        <InputLabel>Action</InputLabel>
-        <Select
-          value={action}
-          onChange={(e) => setAction(e.target.value as PokerAction)}
-          required
-        >
-          <MenuItem value="fold">
-            <ListItemIcon>{actionIcons.fold}</ListItemIcon>
-            Fold
-          </MenuItem>
-          <MenuItem value="call">
-            <ListItemIcon>{actionIcons.call}</ListItemIcon>
-            Call
-          </MenuItem>
-          <MenuItem value="raise">
-            <ListItemIcon>{actionIcons.raise}</ListItemIcon>
-            Raise
-          </MenuItem>
-          <MenuItem value="bet">
-            <ListItemIcon>{actionIcons.bet}</ListItemIcon>
-            Bet
-          </MenuItem>
-          <MenuItem value="check">
-            <ListItemIcon>{actionIcons.check}</ListItemIcon>
-            Check
-          </MenuItem>
-        </Select>
-      </FormControl>
-
-      <FormControlLabel
-        control={
-          <Checkbox
-            checked={isWin}
-            onChange={(e) => {
-              setIsWin(e.target.checked);
-              setResult(e.target.checked ? 1 : -1);
+    <Box sx={{ 
+      width: '100%', 
+      height: '600px', 
+      backgroundColor: '#35654d',
+      borderRadius: '50%',
+      position: 'relative',
+      padding: 2
+    }}>
+      {/* Table de poker */}
+      <Box sx={{ 
+        position: 'absolute', 
+        top: '50%', 
+        left: '50%', 
+        transform: 'translate(-50%, -50%)',
+        display: 'flex',
+        gap: 2
+      }}>
+        {/* Cartes communautaires */}
+        {communityCards.map((card, index) => (
+          <CardSlot
+            key={index}
+            card={card}
+            onClick={() => {
+              setSelectedSlot(index);
+              setCardSelectorOpen(true);
             }}
           />
-        }
-        label="Round gagné"
-        sx={{ mb: 2 }}
-      />
-
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
-        <Box>
-          <Button
-            variant="outlined"
-            onClick={handleSaveRound}
-            disabled={!position || !pot || selectedCards.length !== 2}
-          >
-            Enregistrer
-          </Button>
-          {canShowPredictions && (
-            <Button
-              variant="contained"
-              color="secondary"
-              onClick={() => setOpenPredictions(true)}
-              startIcon={<PredictIcon />}
-              sx={{ ml: 2 }}
-            >
-              Open Predictions
-            </Button>
-          )}
-        </Box>
-
-        {activeStep < steps.length - 1 && (
-          <Button
-            variant="contained"
-            onClick={() => {
-              const currentStreet = steps[activeStep].toLowerCase();
-              setRoundData(prev => ({
-                ...prev,
-                cards: selectedCards,
-                position,
-                streets: {
-                  ...prev.streets,
-                  [currentStreet]: {
-                    action,
-                    pot: Number(pot),
-                    timestamp: Date.now(),
-                    result: isWin ? 1 : -1,
-                    isThreeBet: false,
-                    isCBet: false
-                  }
-                }
-              }));
-              setActiveStep(prev => prev + 1);
-              setPot('');
-              setAction('fold');
-            }}
-            disabled={!position || !pot || selectedCards.length !== 2}
-          >
-            Suivant
-          </Button>
-        )}
+        ))}
       </Box>
 
+      {/* Cartes du joueur */}
+      <Box sx={{
+        position: 'absolute',
+        bottom: '20px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        display: 'flex',
+        gap: 2
+      }}>
+        {[0, 1].map((index) => (
+          <CardSlot
+            key={`player-${index}`}
+            card={selectedCards[index] || null}
+            onClick={() => {
+              setSelectedSlot(index + 5);
+              setCardSelectorOpen(true);
+            }}
+          />
+        ))}
+      </Box>
+
+      {/* Menu latéral */}
+      <Button 
+        variant="contained"
+        sx={{ position: 'absolute', right: 20, top: 20 }}
+        onClick={() => setDrawerOpen(true)}
+        startIcon={<Settings />}
+      >
+        Options
+      </Button>
+
+      {canShowPredictions && (
+        <Button
+          variant="contained"
+          color="secondary"
+          onClick={() => setOpenPredictions(true)}
+          sx={{ position: 'absolute', right: 20, top: 80 }}
+        >
+          Prédictions
+        </Button>
+      )}
+
+      {/* Sélecteur de carte */}
+      <CardSelectorDialog
+        open={cardSelectorOpen}
+        onClose={() => setCardSelectorOpen(false)}
+        selectedCards={[...selectedCards, ...communityCards.filter((c): c is Card => c !== null)]}
+        onCardSelect={(card) => {
+          if (selectedSlot !== null) {
+            if (selectedSlot >= 5) {
+              const newSelectedCards = [...selectedCards];
+              newSelectedCards[selectedSlot - 5] = card;
+              setSelectedCards(newSelectedCards);
+            } else {
+              const newCommunityCards = [...communityCards];
+              newCommunityCards[selectedSlot] = card;
+              setCommunityCards(newCommunityCards);
+            }
+          }
+          setCardSelectorOpen(false);
+        }}
+      />
+
+      {/* Drawer des options */}
+      <Drawer
+        anchor="right"
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+      >
+        <GameOptions
+          position={position}
+          setPosition={setPosition}
+          stackSize={stackSize}
+          setStackSize={setStackSize}
+          blindLevel={blindLevel}
+          setBlindLevel={setBlindLevel}
+          priceToCall={priceToCall}
+          setPriceToCall={setPriceToCall}
+          onSave={() => {
+            handleSaveRound();
+            setDrawerOpen(false);
+          }}
+        />
+      </Drawer>
+
+      {/* Dialog des prédictions */}
       <Dialog
         open={openPredictions}
         onClose={() => setOpenPredictions(false)}
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>Range Analysis</DialogTitle>
+        <DialogTitle>Analyse de Range</DialogTitle>
         <DialogContent>
           <PokerRangeTable
             card1={selectedCards[0]?.value as CardValue}
@@ -334,10 +381,10 @@ const HandTracker: React.FC = () => {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenPredictions(false)}>Close</Button>
+          <Button onClick={() => setOpenPredictions(false)}>Fermer</Button>
         </DialogActions>
       </Dialog>
-    </Paper>
+    </Box>
   );
 };
 
