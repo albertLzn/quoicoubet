@@ -38,10 +38,10 @@ export interface PokerRound {
   blindLevel: string;
   sessionId: string;
 }
-
+export   type PokerAction = 'fold' | 'call' | 'raise' | 'bet' | 'check';
 
 export interface StreetAction {
-  action: 'fold' | 'call' | 'raise' | 'bet' | 'check';
+  action: PokerAction;
   pot: number;
   timestamp: number;
   result: number;

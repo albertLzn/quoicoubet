@@ -4,16 +4,16 @@ import { createTheme } from '@mui/material/styles';
  const theme = createTheme({
   palette: {
     primary: {
-      main: '#663399', // Violet Wario
+      main: '#663399', 
     },
     secondary: {
-      main: '#FFD700', // Jaune or
+      main: '#FF7C05',
     },
     success: {
       main: '#663399',
     },
     error: {
-      main: '#FFD700',
+      main: '#FF7C05',
     },
     text: {
       // primary: '#FFD700',
