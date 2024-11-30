@@ -19,7 +19,7 @@ import { Close as CloseIcon } from '@mui/icons-material';
 
 
 import { useSpring, animated } from 'react-spring';
-import { Card, PokerAction, PokerRound, StreetAction } from '../../types/hand';
+import { Card, evaluateHand, PokerAction, PokerRound, StreetAction } from '../../types/hand';
 import { database } from '../../config/firebase';
 import { ref, push } from 'firebase/database';
 import { RootState } from '../../store';
@@ -58,13 +58,16 @@ const CardSlot: React.FC<{
   onClick: () => void;
   disabled: boolean;
   justUnlocked?: boolean;
-}> = ({ card, onClick, disabled, justUnlocked }) => (
+  highlighted?: boolean;
+}> = ({ card, onClick, disabled, justUnlocked, highlighted}) => (
   <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
     {justUnlocked && <UnlockAnimation />}
     <Paper
       sx={{
         width: 60,
         height: 90,
+        border: highlighted ? '2px solid gold' : undefined,
+        boxShadow: highlighted ? '0 0 10px gold' : undefined,
         cursor: disabled ? 'not-allowed' : 'pointer',
         display: 'flex',
         alignItems: 'center',
@@ -174,6 +177,7 @@ const HandTracker: React.FC = () => {
   const [showPredictionFab, setShowPredictionFab] = useState(false);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
 
+  const [matchingCards, setMatchingCards] = useState<Card[]>([]);
 
   // États partagés entre le drawer et la vue principale
   const [selectedCards, setSelectedCards] = useState<Card[]>([]);
@@ -357,6 +361,15 @@ const HandTracker: React.FC = () => {
       setShowPredictionFab(false);
     }
   }, [canShowPredictions]);
+  useEffect(() => {
+    if (selectedCards.length === 2 && communityCards.some(c => c !== null)) {
+      const { matchingCards } = evaluateHand(
+        selectedCards, 
+        communityCards.filter((card): card is Card => card !== null)
+      );
+            setMatchingCards(matchingCards);
+    }
+  }, [selectedCards, communityCards]);
 
   // Composants de formulaire partagés
   const GameOptionsForm = ({ inDrawer = false }) => (
@@ -379,6 +392,7 @@ const HandTracker: React.FC = () => {
                   setCardSelectorOpen(true);
                 }}
                 disabled={false}
+                highlighted={matchingCards.includes(selectedCards[index] || null)}
               />
             ))}
           </Box>
@@ -638,7 +652,8 @@ const HandTracker: React.FC = () => {
                 }}
                 disabled={isDisabled}
                 justUnlocked={justUnlocked}
-              />
+                highlighted={card !== null && matchingCards.includes(card)}
+                />
             );
           })}
         </Box>
@@ -699,6 +714,7 @@ const HandTracker: React.FC = () => {
                 setSelectedSlot(index + 5);
                 setCardSelectorOpen(true);
               }}
+              highlighted={matchingCards.includes(selectedCards[index] || null)}
             />
           ))}
         </Box>
