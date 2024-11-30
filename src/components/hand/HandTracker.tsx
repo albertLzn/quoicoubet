@@ -183,6 +183,7 @@ const HandTracker: React.FC = () => {
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [communityCards, setCommunityCards] = useState<(Card | null)[]>([null, null, null, null, null]);
   const [openPredictions, setOpenPredictions] = useState(false);
+  const [remainingPlayers, setRemainingPlayers] = useState(9);
 
   const [showPredictionSnack, setShowPredictionSnack] = useState(false);
   const getNextPosition = (currentPosition: string) => {
@@ -223,6 +224,8 @@ const HandTracker: React.FC = () => {
           result: isWin ? 1 : -1,
           isThreeBet: false,
           isCBet: false,
+          remainingPlayers,
+          opponentsCards: [],
           communityCards: (() => {
             switch (currentStreet) {
               case 'flop':
@@ -426,7 +429,20 @@ const HandTracker: React.FC = () => {
                       timestamp: Date.now(),
                       result: isWin ? 1 : -1,
                       isThreeBet: false,
-                      isCBet: false
+                      isCBet: false,
+                      remainingPlayers: 9, // Ajouter cette ligne avec une valeur par défaut
+                      communityCards: (() => {
+                        switch (currentStreet) {
+                          case 'flop':
+                            return communityCards.slice(0, 3).filter((card): card is Card => card !== null);
+                          case 'turn':
+                            return communityCards.slice(0, 4).filter((card): card is Card => card !== null);
+                          case 'river':
+                            return communityCards.slice(0, 5).filter((card): card is Card => card !== null);
+                          default:
+                            return undefined;
+                        }
+                      })()
                     }
                   }
                 }));
@@ -683,7 +699,20 @@ const HandTracker: React.FC = () => {
                       timestamp: Date.now(),
                       result: isWin ? 1 : -1,
                       isThreeBet: false,
-                      isCBet: false
+                      isCBet: false,
+                      remainingPlayers: 9, // Ajouter cette ligne avec une valeur par défaut
+                      communityCards: (() => {
+                        switch (currentStreet) {
+                          case 'flop':
+                            return communityCards.slice(0, 3).filter((card): card is Card => card !== null);
+                          case 'turn':
+                            return communityCards.slice(0, 4).filter((card): card is Card => card !== null);
+                          case 'river':
+                            return communityCards.slice(0, 5).filter((card): card is Card => card !== null);
+                          default:
+                            return undefined;
+                        }
+                      })()
                     }
                   }
                 }));

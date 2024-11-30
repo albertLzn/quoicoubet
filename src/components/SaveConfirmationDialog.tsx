@@ -22,11 +22,12 @@ import {
   StepLabel,
   Tooltip
 } from '@mui/material';
-import { CheckCircle, Cancel, PlayArrow, Edit } from '@mui/icons-material';
+import { CheckCircle, Cancel, PlayArrow, Edit, People } from '@mui/icons-material';
 import { Card, PokerAction, StreetAction } from '../types/hand';
 import { actionIcons } from '../const/icons';
 import CardSelectorDialog from './hand/CardSelectorDialog';
 import { steps } from '../const/poker';
+import OpponentsCardsTable from './OpponentsCardsTable';
 
 interface SaveConfirmationDialogProps {
   open: boolean;
@@ -60,7 +61,9 @@ const SaveConfirmationDialog: React.FC<SaveConfirmationDialogProps> = ({
   const [actionSelectOpen, setActionSelectOpen] = useState(false);
   const [cardSelectorOpen, setCardSelectorOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
-
+  const [opponentsTableOpen, setOpponentsTableOpen] = useState(false);
+  const [remainingPlayers, setRemainingPlayers] = useState(9);
+  const currentStreet = selectedStep !== null ? steps[selectedStep].toLowerCase() : undefined;
   const handleStepClick = (index: number) => {
     setSelectedStep(index);
     setActionSelectOpen(true);
@@ -115,7 +118,27 @@ const SaveConfirmationDialog: React.FC<SaveConfirmationDialogProps> = ({
               setCardSelectorOpen(false);
             }}
           />
+<Grid item xs={6}>
+  <Button
+    fullWidth
+    variant="outlined"
+    onClick={() => setOpponentsTableOpen(true)}
+    startIcon={<People/>}
+  >
+    Joueurs restants ({remainingPlayers})
+  </Button>
+</Grid>
 
+<OpponentsCardsTable
+  open={opponentsTableOpen}
+  onClose={() => setOpponentsTableOpen(false)}
+  remainingPlayers={remainingPlayers}
+  heroCards={roundData.cards}
+  opponentsCards={currentStreet ? roundData.streets[currentStreet]?.opponentsCards || [] : []}
+  onUpdateOpponentsCards={(cards) => {
+    onUpdateData('opponentsCards', cards);
+  }}
+/>
           <Grid item xs={12}>
             <Typography variant="subtitle2" gutterBottom>Main</Typography>
             <Box sx={{ display: 'flex', gap: 1 }}>

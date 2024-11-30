@@ -42,4 +42,6 @@ export interface StreetAction {
   isCBet: boolean;
   isThreeBet: boolean;
   communityCards?: Card[];
+  remainingPlayers: number;  // Nouveau champ
+  opponentsCards?: Card[][];  // Nouveau champ pour les cartes des adversaires
 }
