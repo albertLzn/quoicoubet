@@ -29,6 +29,7 @@ import { CardValue, Position } from '../../types/poker';
 import { actionIcons } from '../../const/icons';
 import SaveConfirmationDialog from '../SaveConfirmationDialog';
 import { steps } from '../../const/poker';
+import NumberInput from '../NumberInput';
 
 type Suit = 'hearts' | 'diamonds' | 'spades' | 'clubs';
 
@@ -436,42 +437,49 @@ const HandTracker: React.FC = () => {
         </Select>
       </FormControl>
 
-      <TextField
-        fullWidth
+
+      <NumberInput
         label="Stack size (BB)"
-        type="number"
+        min={0}
+        max={1000}
         value={stackSize}
-        onChange={(e) => setStackSize(Number(e.target.value))}
+        onChange={(e) => setStackSize(Number(e))}
         size={inDrawer ? "medium" : "small"}
         sx={{ mb: 2 }}
       />
-            <TextField
-        fullWidth
+
+
+      <NumberInput
         label="Joueurs restants"
-        type="number"
+        min={0}
+        max={1000}
         value={remainingPlayers}
-        onChange={(e) => setRemainingPlayers(Number(e.target.value))}
+        onChange={(e) => setRemainingPlayers(Number(e))}
         size={inDrawer ? "medium" : "small"}
         sx={{ mb: 2 }}
       />
 
 
-      <TextField
-        fullWidth
+
+      <NumberInput
         label="Taille du pot"
-        type="number"
+        min={0}
+        max={1000}
         value={pot}
-        onChange={(e) => setPot(e.target.value)}
+        onChange={(e) => setPot(e)}
         size={inDrawer ? "medium" : "small"}
         sx={{ mb: 2 }}
       />
+      
 
-      <TextField
-        fullWidth
+
+
+    <NumberInput
         label="Prix pour suivre (BB)"
-        type="number"
+        min={0}
+        max={1000}
         value={priceToCall}
-        onChange={(e) => setPriceToCall(Number(e.target.value))}
+        onChange={(e) => setPriceToCall(Number(e))}
         size={inDrawer ? "medium" : "small"}
         sx={{ mb: 2 }}
       />
@@ -571,14 +579,16 @@ const HandTracker: React.FC = () => {
         justifyContent: 'space-evenly', // Espace les éléments uniformément
       }}>
         <Box sx={{ display: 'flex', gap: 2, width: '100%', justifyContent: 'center' }}>
-          <TextField
-            size="small"
-            type="number"
-            value={pot}
-            onChange={(e) => setPot(e.target.value)}
-            label="Taille du pot"
-            sx={{ width: '175px' }}
-            // InputProps={{
+
+      <NumberInput
+        size="small"
+        label="Taille du pot"
+        min={0}
+        max={1000}
+        value={pot}
+        onChange={(e) => setPot(e)}
+        sx={{ width: '175px' }}
+        // InputProps={{
             //   readOnly: true,
             //   startAdornment: (
             //     <InputAdornment position="start">
@@ -586,7 +596,7 @@ const HandTracker: React.FC = () => {
             //     </InputAdornment>
             //   ),
             // }}
-          />
+      />
 
         </Box>
 
@@ -687,26 +697,33 @@ const HandTracker: React.FC = () => {
             ))}
           </Select>
 
-        </FormControl>                    <TextField
-          size="small"
-          type="number"
-          value={priceToCall}
-          onChange={(e) => setPriceToCall(Number(e.target.value))}
-          label="Prix pour suivre (BB)"
-          sx={{ width: '175px' }}
-        />
+        </FormControl>                
+
+
+      <NumberInput
+        size="small"
+        label="Prix pour suivre (BB)"
+        min={0}
+        max={1000}
+        value={priceToCall}
+        onChange={(e) => setPriceToCall(Number(e))}
+        sx={{ width: '175px' }}
+      />
+
+
         </Box>
 
         {/* Ligne 5: Action */}
 
-<TextField 
-  size="small" 
-  type="number" 
-  value={remainingPlayers}
-  onChange={(e) => setRemainingPlayers(Number(e.target.value))}
-  label="Joueurs restants"
-  sx={{ width: '175px' }}
-/>
+<NumberInput
+        size="small"
+        label="Joueurs restants"
+        min={2}
+        max={10}
+        value={remainingPlayers}
+        onChange={(e) => setRemainingPlayers(Number(e))}
+        sx={{ width: '175px' }}
+      />
         {/* Ligne 6: Cartes du joueur */}
         <Box sx={{ display: 'flex', gap: 2 }}>
           {[0, 1].map((index) => (
@@ -725,13 +742,17 @@ const HandTracker: React.FC = () => {
 
         <Box sx={{ display: 'flex', gap: 2 }}>
           {/* Stack size */}
-          <TextField
-            size="small"
-            type="number"
-            value={stackSize}
-            onChange={(e) => setStackSize(Number(e.target.value))}
-            label="Stack (BB)"
-            // InputProps={{
+
+
+<NumberInput
+        size="small"
+        label="Stack (BB)"
+        min={0}
+        max={1000}
+        value={stackSize}
+        onChange={(e) => setStackSize(Number(e))}
+        sx={{ width: '175px' }}
+                   // InputProps={{
             //   readOnly: true,
             //   startAdornment: (
             //     <InputAdornment position="start">
@@ -739,7 +760,7 @@ const HandTracker: React.FC = () => {
             //     </InputAdornment>
             //   ),
             // }}
-          />
+      />
         </Box>
 
       </Box>
