@@ -15,12 +15,9 @@ export interface Card {
   suit: 'hearts' | 'diamonds' | 'clubs' | 'spades';
   value: string;
 }
+export   type PokerAction = 'fold' | 'call' | 'raise' | 'bet' | 'check';
 
 export type Street = 'preflop' | 'flop' | 'turn' | 'river';
-
-interface Streets {
-  [key: string]: StreetAction;
-}
 
 export interface PokerRound {
   id: string;
@@ -28,23 +25,21 @@ export interface PokerRound {
   cards: Card[];
   position: string;
   timestamp: number;
-  streets: {
-    preflop?: StreetAction;
-    flop?: StreetAction;
-    turn?: StreetAction;
-    river?: StreetAction;
-  };
+  streets: Streets; // Utiliser l'interface Streets existante
   stackSize: number;
   blindLevel: string;
   sessionId: string;
 }
-export   type PokerAction = 'fold' | 'call' | 'raise' | 'bet' | 'check';
+
+interface Streets {
+  [key: string]: StreetAction;
+}
 
 export interface StreetAction {
   action: PokerAction;
   pot: number;
-  timestamp: number;
   result: number;
-  isThreeBet?: boolean;
-  isCBet?: boolean;
+  isCBet: boolean;
+  isThreeBet: boolean;
+  communityCards?: Card[];
 }

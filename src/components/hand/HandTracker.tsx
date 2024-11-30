@@ -223,6 +223,18 @@ const HandTracker: React.FC = () => {
           result: isWin ? 1 : -1,
           isThreeBet: false,
           isCBet: false,
+          communityCards: (() => {
+            switch (currentStreet) {
+              case 'flop':
+                return communityCards.slice(0, 3).filter((card): card is Card => card !== null);
+              case 'turn':
+                return communityCards.slice(0, 4).filter((card): card is Card => card !== null);
+              case 'river':
+                return communityCards.slice(0, 5).filter((card): card is Card => card !== null);
+              default:
+                return undefined;
+            }
+          })()
         }
       }
     };
@@ -637,7 +649,7 @@ const HandTracker: React.FC = () => {
 
         {/* Groupe de droite */}
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <FormControlLabel
+          {/* <FormControlLabel
             control={
               <Checkbox
                 checked={isWin}
@@ -648,7 +660,7 @@ const HandTracker: React.FC = () => {
               />
             }
             label="Win"
-          />
+          /> */}
 <Button 
   variant="outlined" 
   onClick={() => setSaveModalOpen(true)}
@@ -794,6 +806,7 @@ const HandTracker: React.FC = () => {
 
 <SaveConfirmationDialog
   open={saveModalOpen}
+  mode='create'
   onClose={() => setSaveModalOpen(false)}
   onSave={() => {
     handleSaveRound();

@@ -41,10 +41,10 @@ const Dashboard: React.FC = () => {
     <Grid container spacing={3}>
       <Grid item xs={12}>
         <Paper sx={{ p: 2 }}>
-          <Typography variant="h5" gutterBottom>Tableau de bord</Typography>
+          {/* <Typography variant="h5" gutterBottom>Tableau de bord</Typography> */}
 
-      <Grid item xs={12}>
-        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+          <StatsDashboard />
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
           <Button
             variant="contained"
             color="secondary"
@@ -63,8 +63,6 @@ const Dashboard: React.FC = () => {
             Créer une nouvelle main
           </Button>
         </Box>
-      </Grid>
-          <StatsDashboard />
         </Paper>
       </Grid>
 

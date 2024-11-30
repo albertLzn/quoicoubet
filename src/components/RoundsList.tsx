@@ -18,11 +18,13 @@ import {
 import { Edit, Delete } from '@mui/icons-material';
 import { useSpring, animated } from 'react-spring';
 import { RootState } from '../store';
-import { PokerRound } from '../types/hand';
+import { Card, PokerRound } from '../types/hand';
 import { actionIcons } from '../const/icons';
 import { steps } from '../const/poker';
+import SaveConfirmationDialog from './SaveConfirmationDialog';
 
 const RoundCard: React.FC<{ round: PokerRound }> = ({ round }) => {
+  const [showDetails, setShowDetails] = useState(false);
   const animation = useSpring({
     from: { opacity: 0, transform: 'translateY(20px)' },
     to: { opacity: 1, transform: 'translateY(0)' },
@@ -32,39 +34,93 @@ const RoundCard: React.FC<{ round: PokerRound }> = ({ round }) => {
   const streets = Object.values(round.streets);
   const lastStreet = streets[streets.length - 1];
   const isWin = lastStreet?.result > 0;
+  const handleUpdateRoundData = (field: string, value: any) => {
+    // Logique de mise à jour à implémenter
+    console.log('Updating', field, value);
+  };
 
-  return (
-    <animated.div style={animation}>
-      <Paper sx={{
-        p: 2,
-        mb: 2,
-        display: 'flex',
-        alignItems: 'center',
-        background: isWin
-          ? 'linear-gradient(45deg, rgba(200, 250, 205, 0.6), rgba(200, 250, 205, 0.9))'
-          : 'linear-gradient(45deg, rgba(255, 200, 200, 0.6), rgba(255, 200, 200, 0.9))'
-      }}>
-        {/* Cartes du joueur */}
-        <Box sx={{ width: '120px' }}>
-          <Typography variant="subtitle2" gutterBottom>
-            Main
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            {round.cards.map((card, idx) => (
+  const handleUpdateRound = () => {
+    // Logique de sauvegarde à implémenter
+    console.log('Saving round updates');
+    setShowDetails(false);
+  };
+  // Fonction pour afficher les cartes selon le step
+  const getStepCards = (index: number) => {
+    if (index === 0) {
+      return (
+        <Box sx={{ display: 'flex', gap: 0.5 }}>
+          {round.cards.map((card, idx) => (
+            <Paper
+              key={idx}
+              sx={{
+                p: 0.5,
+                color: ['hearts', 'diamonds'].includes(card.suit) ? 'red' : 'black',
+                bgcolor: 'rgba(255, 255, 255, 0.9)',
+                border: '2px solid gold',
+                borderRadius: 1,
+                fontSize: '0.8rem',
+                fontWeight: 'bold'
+              }}
+            >
+              {card.value}{card.suit.charAt(0)}
+            </Paper>
+          ))}
+        </Box>
+      );
+    } else {
+      const street = round.streets[steps[index].toLowerCase()];
+      if (street?.communityCards?.length) {
+        let cardsToShow: Card[] = [];
+        switch(index) {
+          case 1: // Flop
+            cardsToShow = street.communityCards.slice(0, 3);
+            break;
+          case 2: // Turn
+            cardsToShow = street.communityCards.slice(3, 4);
+            break;
+          case 3: // River
+            cardsToShow = street.communityCards.slice(4, 5);
+            break;
+        }
+        
+        return (
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
+            {cardsToShow.map((card, idx) => (
               <Paper
                 key={idx}
                 sx={{
-                  p: 1,
-                  color: ['hearts', 'diamonds'].includes(card.suit) ? 'red' : 'black'
+                  p: 0.5,
+                  color: ['hearts', 'diamonds'].includes(card.suit) ? 'red' : 'black',
+                  bgcolor: 'rgba(255, 255, 255, 0.7)',
+                  borderRadius: 1,
+                  fontSize: '0.8rem'
                 }}
               >
                 {card.value}{card.suit.charAt(0)}
               </Paper>
             ))}
           </Box>
-        </Box>
+        );
+      }
+    }
+    return null;
+  };
 
-        {/* Stepper personnalisé */}
+  return (
+    <animated.div style={animation}>
+      <Paper 
+        sx={{ 
+          p: 2, 
+          mb: 2, 
+          display: 'flex', 
+          alignItems: 'center',
+          background: isWin 
+            ? 'linear-gradient(45deg, rgba(200, 250, 205, 0.6), rgba(200, 250, 205, 0.9))'
+            : 'linear-gradient(45deg, rgba(255, 200, 200, 0.6), rgba(255, 200, 200, 0.9))',
+          cursor: 'pointer'
+        }}
+        onClick={() => setShowDetails(true)}
+      >
         <Box sx={{ flex: 1, mx: 3 }}>
           <Stepper sx={{
             '& .MuiStepLabel-label': {
@@ -78,52 +134,22 @@ const RoundCard: React.FC<{ round: PokerRound }> = ({ round }) => {
               <Step key={label} completed={index < streets.length}>
                 <StepLabel
                   icon={
-                    index < streets.length
+                    index < streets.length && streets[index].action
                       ? <Tooltip title={`${streets[index].action.toUpperCase()} (${streets[index].pot} BB)`}>
-                        <Box sx={{ color: 'primary.main' }}>
-                          {actionIcons[streets[index].action]}
-                        </Box>
-                      </Tooltip>
+                          <Box sx={{ color: 'primary.main' }}>
+                            {actionIcons[streets[index].action]}
+                          </Box>
+                        </Tooltip>
                       : index + 1
                   }
                 >
-                  {index < streets.length ? streets[index].action.toUpperCase() : label}
+                  {getStepCards(index)}
                 </StepLabel>
               </Step>
             ))}
           </Stepper>
-
-          <Grid container sx={{ mt: 2 }}>
-            {steps.map((step, idx) => (
-              <Grid
-                item
-                xs={3}
-                key={idx}
-                sx={{
-                  textAlign: 'center',
-                  px: { xs: 0.5, sm: 1 }
-                }}
-              >
-                {idx < streets.length && (
-                  <Tooltip title={`${streets[idx].pot} BB`}>
-                    <Typography
-                      variant="body2"
-                      noWrap
-                      sx={{
-                        fontSize: { xs: '0.7rem', sm: '0.875rem' },
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {streets[idx].pot} BB
-                    </Typography>
-                  </Tooltip>
-                )}
-              </Grid>
-            ))}
-          </Grid>
         </Box>
 
-        {/* Résultat */}
         <Box sx={{
           width: '150px',
           textAlign: 'right',
@@ -132,22 +158,32 @@ const RoundCard: React.FC<{ round: PokerRound }> = ({ round }) => {
           <Typography variant="h6">
             {isWin ? '+' : ''}{lastStreet?.result} BB
           </Typography>
-          <Box>
-            <IconButton size="small">
-              <Edit />
-            </IconButton>
-            <IconButton size="small" color="error">
-              <Delete />
-            </IconButton>
-          </Box>
         </Box>
       </Paper>
+      <SaveConfirmationDialog
+        mode="edit"
+        open={showDetails}
+        onClose={() => setShowDetails(false)}
+        onSave={handleUpdateRound}
+        roundData={{
+          cards: round.cards,
+          position: round.position,
+          action: Object.values(round.streets)[0]?.action || 'fold',
+          pot: String(Object.values(round.streets)[0]?.pot || 0),
+          stackSize: round.stackSize,
+          blindLevel: round.blindLevel,
+          isWin: Object.values(round.streets).slice(-1)[0]?.result > 0,
+          streets: round.streets
+        }}
+        onUpdateData={handleUpdateRoundData}
+      />
     </animated.div>
   );
 };
 
 const RoundsList: React.FC = () => {
   const rounds = useSelector((state: RootState) => state.rounds.rounds);
+  console.log('the rounds ', rounds);
   const [sortBy, setSortBy] = useState<'date' | 'result' | 'action'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [filterAction, setFilterAction] = useState<string>('all');

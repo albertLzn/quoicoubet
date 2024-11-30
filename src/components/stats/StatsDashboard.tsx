@@ -19,7 +19,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, unit = '' }) => {
   });
 
   return (
-    <Paper sx={{ p: 2, height: '100%' }}>
+    <Paper sx={{ p: 1, height: '100%' }}>
       <Typography variant="h6" gutterBottom>
         {title}
       </Typography>
