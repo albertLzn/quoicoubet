@@ -265,6 +265,8 @@ const HandTracker: React.FC = () => {
     setPot(String(newPot));
     
     setActiveStep(prev => prev + 1);
+    setDrawerOpen(false);  // Ajout de cette ligne
+
   };
   
   // Modifier le handler pour "Valider et continuer"
@@ -306,8 +308,10 @@ const HandTracker: React.FC = () => {
       isThreeBet: false,
       isCBet: false,
       remainingPlayers,
-      communityCards: currentStreet === 'preflop' ? [] : (() => {
+      communityCards:  (() => {
         switch (currentStreet) {
+          case 'preflop':
+            return [];
           case 'flop':
             return communityCards.slice(0, 3).filter((card): card is Card => card !== null);
           case 'turn':
@@ -574,14 +578,14 @@ const HandTracker: React.FC = () => {
             onChange={(e) => setPot(e.target.value)}
             label="Taille du pot"
             sx={{ width: '175px' }}
-            InputProps={{
-              readOnly: true,
-              startAdornment: (
-                <InputAdornment position="start">
-                  <AnimatedNumber value={Number(pot)} />
-                </InputAdornment>
-              ),
-            }}
+            // InputProps={{
+            //   readOnly: true,
+            //   startAdornment: (
+            //     <InputAdornment position="start">
+            //       <AnimatedNumber value={Number(pot)} />
+            //     </InputAdornment>
+            //   ),
+            // }}
           />
 
         </Box>
@@ -727,14 +731,14 @@ const HandTracker: React.FC = () => {
             value={stackSize}
             onChange={(e) => setStackSize(Number(e.target.value))}
             label="Stack (BB)"
-            InputProps={{
-              readOnly: true,
-              startAdornment: (
-                <InputAdornment position="start">
-                  <AnimatedNumber value={stackSize} />
-                </InputAdornment>
-              ),
-            }}
+            // InputProps={{
+            //   readOnly: true,
+            //   startAdornment: (
+            //     <InputAdornment position="start">
+            //       <AnimatedNumber value={stackSize} />
+            //     </InputAdornment>
+            //   ),
+            // }}
           />
         </Box>
 
@@ -825,6 +829,7 @@ const HandTracker: React.FC = () => {
                 setActiveStep(prev => prev + 1);
                 setPot('');
                 setAction('fold');
+
               }}
             >
               Suivant

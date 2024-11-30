@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import {
   Paper,
@@ -23,8 +23,30 @@ import { actionIcons } from '../const/icons';
 import { steps } from '../const/poker';
 import SaveConfirmationDialog from './SaveConfirmationDialog';
 
-const RoundCard: React.FC<{ round: PokerRound }> = ({ round }) => {
+const RoundCard: React.FC<{ round: PokerRound; isNew?: boolean }> = ({ round, isNew }) => {
   const [showDetails, setShowDetails] = useState(false);
+  const [isLocked, setIsLocked] = useState(isNew);
+
+  const unlockAnimation = useSpring({
+    from: { 
+      opacity: isLocked ? 0.5 : 1,
+      transform: isLocked ? 'scale(0.95)' : 'scale(1)',
+      filter: isLocked ? 'grayscale(1)' : 'grayscale(0)',
+    },
+    to: async (next) => {
+      if (isLocked) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        await next({ transform: 'scale(1.05)' });
+        await next({ transform: 'scale(0.95)' });
+        await next({ transform: 'scale(1.02)' });
+        await next({ transform: 'scale(0.98)' });
+        await next({ transform: 'scale(1)' });
+        setIsLocked(false);
+      }
+    },
+    config: { tension: 300, friction: 10 }
+  });
+
   const animation = useSpring({
     from: { opacity: 0, transform: 'translateY(20px)' },
     to: { opacity: 1, transform: 'translateY(0)' },
@@ -107,12 +129,14 @@ const RoundCard: React.FC<{ round: PokerRound }> = ({ round }) => {
   };
 
   return (
-    <animated.div style={animation}>
+    <animated.div style={{ ...animation, ...unlockAnimation }}>
       <Paper 
         sx={{ 
           p: 2, 
           mb: 2, 
-          display: 'flex', 
+          display: 'flex',
+          filter: isLocked ? 'grayscale(1)' : 'none',
+          transition: 'filter 0.5s',
           alignItems: 'center',
           background: isWin 
             ? 'linear-gradient(45deg, rgba(200, 250, 205, 0.6), rgba(200, 250, 205, 0.9))'
@@ -122,32 +146,46 @@ const RoundCard: React.FC<{ round: PokerRound }> = ({ round }) => {
         onClick={() => setShowDetails(true)}
       >
         <Box sx={{ flex: 1, mx: 3 }}>
-          <Stepper sx={{
-            '& .MuiStepLabel-label': {
-              display: { xs: 'none', sm: 'block' }
-            },
-            '& .MuiStep-root': {
-              px: { xs: 0, sm: 1 }
-            }
-          }}>
-            {steps.map((label, index) => (
-              <Step key={label} completed={index < streets.length}>
-                <StepLabel
-                  icon={
-                    index < streets.length && streets[index].action
-                      ? <Tooltip title={`${streets[index].action.toUpperCase()} (${streets[index].pot} BB)`}>
-                          <Box sx={{ color: 'primary.main' }}>
-                            {actionIcons[streets[index].action]}
-                          </Box>
-                        </Tooltip>
-                      : index + 1
-                  }
-                >
-                  {getStepCards(index)}
-                </StepLabel>
-              </Step>
-            ))}
-          </Stepper>
+<Stepper sx={{
+  '& .MuiStepLabel-label': {
+    display: 'block', // Toujours afficher le label
+    fontSize: { xs: '0.7rem', sm: '0.875rem' }
+  },
+  '& .MuiStep-root': {
+    px: { xs: 1, sm: 2 }
+  },
+  '& .MuiStepLabel-root': {
+    flexDirection: 'column',
+    alignItems: 'center'
+  }
+}}>
+  {steps.map((label, index) => (
+    <Step key={label} completed={index < streets.length}>
+      <StepLabel
+        icon={
+          index < streets.length && streets[index].action ? 
+            <Tooltip title={`${streets[index].action.toUpperCase()} (${streets[index].pot} BB)`}>
+              <Box sx={{ color: 'primary.main' }}>
+                {actionIcons[streets[index].action]}
+              </Box>
+            </Tooltip>
+            : index + 1
+        }
+      >
+        <Box sx={{ 
+          mt: 1,
+          display: 'flex', 
+          gap: 0.5,
+          flexWrap: 'nowrap',
+          transform: { xs: 'scale(0.8)', sm: 'scale(1)' },
+          transformOrigin: 'top center'
+        }}>
+          {getStepCards(index)}
+        </Box>
+      </StepLabel>
+    </Step>
+  ))}
+</Stepper>
         </Box>
 
         <Box sx={{
@@ -183,10 +221,19 @@ const RoundCard: React.FC<{ round: PokerRound }> = ({ round }) => {
 
 const RoundsList: React.FC = () => {
   const rounds = useSelector((state: RootState) => state.rounds.rounds);
+  const [newRoundId, setNewRoundId] = useState<string | null>(null);
   console.log('the rounds ', rounds);
   const [sortBy, setSortBy] = useState<'date' | 'result' | 'action'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [filterAction, setFilterAction] = useState<string>('all');
+
+  useEffect(() => {
+    if (rounds.length > 0) {
+      const latestRound = rounds[0];
+      setNewRoundId(latestRound.id);
+      setTimeout(() => setNewRoundId(null), 2000);
+    }
+  }, [rounds.length]);
 
   // Tri des rounds
   const sortedRounds = useMemo(() => {
@@ -289,7 +336,11 @@ const RoundsList: React.FC = () => {
 
       {/* Liste des rounds */}
       {sortedRounds.map((round: PokerRound) => (
-        <RoundCard key={round.id} round={round} />
+        <RoundCard 
+          key={round.id} 
+          round={round}
+          isNew={round.id === newRoundId}
+        />
       ))}
     </Box>
   );

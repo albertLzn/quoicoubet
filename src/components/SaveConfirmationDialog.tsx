@@ -28,6 +28,7 @@ import { actionIcons } from '../const/icons';
 import CardSelectorDialog from './hand/CardSelectorDialog';
 import { steps } from '../const/poker';
 import OpponentsCardsTable from './OpponentsCardsTable';
+import { useNavigate } from 'react-router-dom';
 
 interface SaveConfirmationDialogProps {
   open: boolean;
@@ -68,7 +69,15 @@ const SaveConfirmationDialog: React.FC<SaveConfirmationDialogProps> = ({
     setSelectedStep(index);
     setActionSelectOpen(true);
   };
+  const navigate = useNavigate();
+  const handleSave = () => {
+    onSave();
+    navigate('/');
+  };
 
+  const toggleMode = () => {
+    mode == 'edit' ? mode = 'create' : mode = 'edit'
+  };
   const handleActionChange = (newAction: PokerAction) => {
     if (selectedStep !== null) {
       onUpdateData(`streets.${steps[selectedStep].toLowerCase()}.action`, newAction);
@@ -97,7 +106,8 @@ const SaveConfirmationDialog: React.FC<SaveConfirmationDialogProps> = ({
             margin: 'auto',
             mb: 2
           }}
-        >
+          onClick={() => toggleMode}
+          >
           {mode === 'create' ? <CheckCircle sx={{ fontSize: 40 }} /> : <Edit sx={{ fontSize: 40 }} />}
         </Avatar>
         {mode === 'create' ? 'Sauvegarder la main' : 'Modifier la main'}
@@ -291,7 +301,7 @@ const SaveConfirmationDialog: React.FC<SaveConfirmationDialogProps> = ({
         </Button>
         <Button
           startIcon={<CheckCircle />}
-          onClick={onSave}
+          onClick={handleSave}
           variant="contained"
           color="primary"
         >
