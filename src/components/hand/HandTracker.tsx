@@ -228,47 +228,65 @@ const HandTracker: React.FC = () => {
         return currentStack;
     }
   };
+// Ajouter ces états pour tracker les joueurs qui ont payé
+const [playersWhoPaid, setPlayersWhoPaid] = useState(0);
 
-  const handleNextStep = () => {
-    const currentStreet = steps[activeStep].toLowerCase();
-    
-    // Sauvegarder les valeurs actuelles
-    setPreviousPot(Number(pot));
-    setPreviousPriceToCall(priceToCall);
-    
-    // Mettre à jour le roundData
-    setRoundData(prev => ({
-      ...prev,
-      streets: {
-        ...prev.streets,
-        [currentStreet]: {
-          action,
-          pot: Number(pot),
-          timestamp: Date.now(),
-          result: isWin ? 1 : -1,
-          isThreeBet: false,
-          isCBet: false,
-          remainingPlayers
-        }
-      }
-    }));
+const handleNextStep = () => {
+  const currentStreet = steps[activeStep].toLowerCase();
   
-    // Calculer les nouvelles valeurs pour le prochain step
-    const newStackSize = updateStackSize(action, priceToCall, stackSize);
-    setStackSize(newStackSize);
-    
-    // Reset des valeurs pour le prochain street
-    setAction('check');
-    setPriceToCall(0);
-    
-    // Calculer le nouveau pot
-    const newPot = calculateNewPot(Number(pot), previousPriceToCall, remainingPlayers);
-    setPot(String(newPot));
-    
-    setActiveStep(prev => prev + 1);
-    setDrawerOpen(false);  // Ajout de cette ligne
-
+  // Calculer le nombre de joueurs qui ont payé
+  const calculatePlayersWhoPaid = () => {
+    if (action === 'fold') return 0;
+    if (action === 'check') return remainingPlayers;
+    return Math.min(remainingPlayers, playersWhoPaid + 1);
   };
+
+  // Calculer le nouveau pot
+  const newPot = (() => {
+    const currentPot = Number(pot);
+    const totalCall = priceToCall * calculatePlayersWhoPaid();
+    return currentPot + totalCall;
+  })();
+
+  // Calculer le nouveau stack size
+  const newStackSize = (() => {
+    if (action === 'fold') return stackSize;
+    if (action === 'check') return stackSize;
+    if (action === 'call') return stackSize - priceToCall;
+    return stackSize - (priceToCall * 2); // Pour raise/bet
+  })();
+
+  // Mettre à jour le roundData
+  setRoundData(prev => ({
+    ...prev,
+    streets: {
+      ...prev.streets,
+      [currentStreet]: {
+        action,
+        pot: newPot,
+        timestamp: Date.now(),
+        result: isWin ? 1 : -1,
+        isThreeBet: false,
+        isCBet: false,
+        remainingPlayers,
+        communityCards: []
+      }
+    }
+  }));
+
+  // Mettre à jour les états avec animation
+  setStackSize(newStackSize);
+  setPot(String(newPot));
+  setPlayersWhoPaid(calculatePlayersWhoPaid());
+  
+  // Reset des valeurs pour le prochain street
+  setAction('check');
+  setPriceToCall(0);
+  setActiveStep(prev => prev + 1);
+  setDrawerOpen(false);
+};
+
+
   
   // Modifier le handler pour "Valider et continuer"
 
@@ -848,7 +866,6 @@ const HandTracker: React.FC = () => {
                   }
                 }));
                 setActiveStep(prev => prev + 1);
-                setPot('');
                 setAction('fold');
 
               }}

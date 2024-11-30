@@ -1,5 +1,15 @@
 import { TextField } from "@mui/material";
-
+interface NumberInputProps {
+    value: string | number;
+    onChange: (value: string) => void;
+    label: string;
+    min?: number;
+    max?: number;
+    allowNegative?: boolean;
+    sx?: any;
+    size?: "small" | "medium";
+    InputProps?: any; // Ajout du support des InputProps
+  }
 const NumberInput: React.FC<{
     value: string | number;
     onChange: (value: string) => void;
