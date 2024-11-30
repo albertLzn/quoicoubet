@@ -7,7 +7,8 @@ import {
   Typography, Grid, Drawer,
   Snackbar,
   IconButton,
-  Tooltip
+  Tooltip,
+  InputAdornment
 } from '@mui/material';
 import { Fab } from '@mui/material';
 import { Analytics as PredictionIcon } from '@mui/icons-material';
@@ -18,7 +19,7 @@ import { Close as CloseIcon } from '@mui/icons-material';
 
 
 import { useSpring, animated } from 'react-spring';
-import { Card, PokerAction, PokerRound } from '../../types/hand';
+import { Card, PokerAction, PokerRound, StreetAction } from '../../types/hand';
 import { database } from '../../config/firebase';
 import { ref, push } from 'firebase/database';
 import { RootState } from '../../store';
@@ -157,6 +158,16 @@ const CardSelectorDialog: React.FC<{
   );
 };
 
+const AnimatedNumber: React.FC<{ value: number }> = ({ value }) => {
+  const { number } = useSpring({
+    from: { number: 0 },
+    to: { number: value },
+    config: { duration: 1000 }
+  });
+
+  return <animated.span>{number.to(n => n.toFixed(0))}</animated.span>;
+};
+
 const HandTracker: React.FC = () => {
   const dispatch = useDispatch();
   const user = useSelector((state: RootState) => state.auth.user);
@@ -176,7 +187,9 @@ const HandTracker: React.FC = () => {
   const [blindLevel, setBlindLevel] = useState<string>('');
   const [sessionId] = useState<string>(Date.now().toString());
   const [priceToCall, setPriceToCall] = useState<number>(0);
-
+  const [previousPot, setPreviousPot] = useState(0);
+  const [previousPriceToCall, setPreviousPriceToCall] = useState(0);
+  const [playersWhoActed, setPlayersWhoActed] = useState(0);
   // États de l'interface
   const [drawerOpen, setDrawerOpen] = useState(true);
   const [cardSelectorOpen, setCardSelectorOpen] = useState(false);
@@ -191,6 +204,67 @@ const HandTracker: React.FC = () => {
     const currentIndex = positions.indexOf(currentPosition);
     return positions[(currentIndex + 1) % positions.length];
   };
+
+  const calculateNewPot = (currentPot: number, priceToCall: number, players: number) => {
+    return currentPot + (priceToCall * players);
+  };
+
+  const updateStackSize = (action: PokerAction, priceToCall: number, currentStack: number) => {
+    switch(action) {
+      case 'fold':
+        return currentStack;
+      case 'call':
+      case 'check':
+        return currentStack - priceToCall;
+      case 'raise':
+      case 'bet':
+        return currentStack - (priceToCall * 2); // Exemple simple, à adapter selon vos règles
+      default:
+        return currentStack;
+    }
+  };
+
+  const handleNextStep = () => {
+    const currentStreet = steps[activeStep].toLowerCase();
+    
+    // Sauvegarder les valeurs actuelles
+    setPreviousPot(Number(pot));
+    setPreviousPriceToCall(priceToCall);
+    
+    // Mettre à jour le roundData
+    setRoundData(prev => ({
+      ...prev,
+      streets: {
+        ...prev.streets,
+        [currentStreet]: {
+          action,
+          pot: Number(pot),
+          timestamp: Date.now(),
+          result: isWin ? 1 : -1,
+          isThreeBet: false,
+          isCBet: false,
+          remainingPlayers
+        }
+      }
+    }));
+  
+    // Calculer les nouvelles valeurs pour le prochain step
+    const newStackSize = updateStackSize(action, priceToCall, stackSize);
+    setStackSize(newStackSize);
+    
+    // Reset des valeurs pour le prochain street
+    setAction('check');
+    setPriceToCall(0);
+    
+    // Calculer le nouveau pot
+    const newPot = calculateNewPot(Number(pot), previousPriceToCall, remainingPlayers);
+    setPot(String(newPot));
+    
+    setActiveStep(prev => prev + 1);
+  };
+  
+  // Modifier le handler pour "Valider et continuer"
+
 
   const [roundData, setRoundData] = useState<PokerRound>({
     id: '',
@@ -208,6 +282,43 @@ const HandTracker: React.FC = () => {
 
   const handleSaveRound = async () => {
     const currentStreet = steps[activeStep].toLowerCase();
+    const streetCommunityCards = (() => {
+      switch (currentStreet) {
+        case 'flop':
+          return communityCards.slice(0, 3).filter((card): card is Card => card !== null);
+        case 'turn':
+          return communityCards.slice(0, 4).filter((card): card is Card => card !== null);
+        case 'river':
+          return communityCards.slice(0, 5).filter((card): card is Card => card !== null);
+        default:
+          return [];
+      }
+    })();
+    const streetData = {
+      action,
+      pot: Number(pot),
+      timestamp: Date.now(),
+      result: isWin ? 1 : -1,
+      isThreeBet: false,
+      isCBet: false,
+      remainingPlayers,
+      communityCards: currentStreet === 'preflop' ? [] : (() => {
+        switch (currentStreet) {
+          case 'flop':
+            return communityCards.slice(0, 3).filter((card): card is Card => card !== null);
+          case 'turn':
+            return communityCards.slice(0, 4).filter((card): card is Card => card !== null);
+          case 'river':
+            return communityCards.slice(0, 5).filter((card): card is Card => card !== null);
+          default:
+            return [];
+        }
+      })()
+    };
+  
+    if (streetCommunityCards.length > 0) {
+      streetData.communityCards = streetCommunityCards;
+    }
     const updatedRoundData = {
       ...roundData,
       cards: selectedCards,
@@ -217,28 +328,7 @@ const HandTracker: React.FC = () => {
       sessionId: sessionId || Date.now().toString(),
       streets: {
         ...roundData.streets,
-        [currentStreet]: {
-          action,
-          pot: Number(pot),
-          timestamp: Date.now(),
-          result: isWin ? 1 : -1,
-          isThreeBet: false,
-          isCBet: false,
-          remainingPlayers,
-          opponentsCards: [],
-          communityCards: (() => {
-            switch (currentStreet) {
-              case 'flop':
-                return communityCards.slice(0, 3).filter((card): card is Card => card !== null);
-              case 'turn':
-                return communityCards.slice(0, 4).filter((card): card is Card => card !== null);
-              case 'river':
-                return communityCards.slice(0, 5).filter((card): card is Card => card !== null);
-              default:
-                return undefined;
-            }
-          })()
-        }
+        [currentStreet]: streetData
       }
     };
 
@@ -255,7 +345,7 @@ const HandTracker: React.FC = () => {
       }
     } catch (error) {
       console.error('Error saving round:', error);
-    }
+      console.error('Failed round data:', JSON.stringify(updatedRoundData, null, 2));    }
   };
 
   useEffect(() => {
@@ -337,6 +427,16 @@ const HandTracker: React.FC = () => {
         size={inDrawer ? "medium" : "small"}
         sx={{ mb: 2 }}
       />
+            <TextField
+        fullWidth
+        label="Joueurs restants"
+        type="number"
+        value={remainingPlayers}
+        onChange={(e) => setRemainingPlayers(Number(e.target.value))}
+        size={inDrawer ? "medium" : "small"}
+        sx={{ mb: 2 }}
+      />
+
 
       <TextField
         fullWidth
@@ -417,40 +517,7 @@ const HandTracker: React.FC = () => {
           {activeStep < steps.length - 1 && (
             <Button
               variant="contained"
-              onClick={() => {
-                const currentStreet = steps[activeStep].toLowerCase();
-                setRoundData(prev => ({
-                  ...prev,
-                  streets: {
-                    ...prev.streets,
-                    [currentStreet]: {
-                      action,
-                      pot: Number(pot),
-                      timestamp: Date.now(),
-                      result: isWin ? 1 : -1,
-                      isThreeBet: false,
-                      isCBet: false,
-                      remainingPlayers: 9, // Ajouter cette ligne avec une valeur par défaut
-                      communityCards: (() => {
-                        switch (currentStreet) {
-                          case 'flop':
-                            return communityCards.slice(0, 3).filter((card): card is Card => card !== null);
-                          case 'turn':
-                            return communityCards.slice(0, 4).filter((card): card is Card => card !== null);
-                          case 'river':
-                            return communityCards.slice(0, 5).filter((card): card is Card => card !== null);
-                          default:
-                            return undefined;
-                        }
-                      })()
-                    }
-                  }
-                }));
-                setActiveStep(prev => prev + 1);
-                setPot('');
-                setAction('fold');
-                setDrawerOpen(false);
-              }}
+              onClick={handleNextStep}
               fullWidth
             >
               Suivant
@@ -493,6 +560,14 @@ const HandTracker: React.FC = () => {
             onChange={(e) => setPot(e.target.value)}
             label="Taille du pot"
             sx={{ width: '175px' }}
+            InputProps={{
+              readOnly: true,
+              startAdornment: (
+                <InputAdornment position="start">
+                  <AnimatedNumber value={Number(pot)} />
+                </InputAdornment>
+              ),
+            }}
           />
 
         </Box>
@@ -605,7 +680,14 @@ const HandTracker: React.FC = () => {
 
         {/* Ligne 5: Action */}
 
-
+<TextField 
+  size="small" 
+  type="number" 
+  value={remainingPlayers}
+  onChange={(e) => setRemainingPlayers(Number(e.target.value))}
+  label="Joueurs restants"
+  sx={{ width: '175px' }}
+/>
         {/* Ligne 6: Cartes du joueur */}
         <Box sx={{ display: 'flex', gap: 2 }}>
           {[0, 1].map((index) => (
@@ -629,6 +711,14 @@ const HandTracker: React.FC = () => {
             value={stackSize}
             onChange={(e) => setStackSize(Number(e.target.value))}
             label="Stack (BB)"
+            InputProps={{
+              readOnly: true,
+              startAdornment: (
+                <InputAdornment position="start">
+                  <AnimatedNumber value={stackSize} />
+                </InputAdornment>
+              ),
+            }}
           />
         </Box>
 
